@@ -53,16 +53,16 @@ def connect(sid, environ):
 
 
 def send_control(steering_angle, throttle):
-    sio.emit("steer", data={
-    'steering_angle': steering_angle.__str__(),
-    'throttle': throttle.__str__()
-    }, skip_sid=True)
+    sio.emit('steer', data={
+             'steering_angle': steering_angle.__str__(),
+             'throttle': throttle.__str__()
+             }, skip_sid=True)
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Remote Driving')
     parser.add_argument('model', type=str,
-    help='Path to model definition json. Model weights should be on the same path.')
+                        help='Path to model definition json. Model weights should be on the same path.')
     args = parser.parse_args()
     with open(args.model, 'r') as jfile:
         # NOTE: if you saved the file by calling json.dump(model.to_json(), ...)
@@ -72,7 +72,6 @@ if __name__ == '__main__':
         #
         # instead.
         model = model_from_json(jfile.read())
-
 
     model.compile("adam", "mse")
     weights_file = args.model.replace('json', 'h5')
