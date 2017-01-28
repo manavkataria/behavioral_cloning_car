@@ -3,18 +3,17 @@ import os
 import cv2
 import matplotlib
 import numpy as np
-import matplotlib.pyplot as plt
 
 from keras.layers import Dense  # Activation
 from keras.layers.convolutional import Convolution2D
 from keras.layers.core import Dropout, Flatten
 from keras.models import load_model, model_from_json, Sequential
 from keras.optimizers import Adam  # SGD
-from keras.regularizers import activity_l2  # l2
+# from keras.regularizers import activity_l2,  l2
 from keras.utils.visualize_util import plot
 
-matplotlib.use('TkAgg')
-
+matplotlib.use('TkAgg')  # MacOSX Compatibility
+import matplotlib.pyplot as plt
 
 # Settings
 BATCH_SIZE = 32
@@ -32,11 +31,12 @@ DROPOUT = 0.1
 
 DRIVING_LOG = "training/minimal/driving_log.csv"
 
-TRAIN_SIZE = 1.0
+TRAINING_PORTION = 1.0
 SHOW_DATA = False
 
 # percentage of data to be cut from left, top, right, bottom
 ROI_bbox = [0.0, 0.40, 0.0, 0.13]
+
 
 def cut_ROI_bbox(image_data):
     w = image_data.shape[1]
@@ -48,7 +48,9 @@ def cut_ROI_bbox(image_data):
     ROI_data = image_data[y1:y2, x1:x2]
     return ROI_data
 
+
 def preprocess_image(image):
+    """ Resize and Crop Image """
     ROI_data = cut_ROI_bbox(image)
     processed_data = cv2.resize(ROI_data, (WIDTH, HEIGHT))
     return processed_data
@@ -111,33 +113,30 @@ class Model(object):
             # lines.append(dbfile.readlines())
         return self.lines
 
-    def rows_to_feature_labels(self, count, rows):
+    def rows_to_feature_labels(self, count, rows, horizontal_flip=True):
         # Allocate twice the size to accomodate
         # both original and horizontally flipped images
-        x = np.empty((2 * count, HEIGHT, WIDTH, DEPTH), dtype=np.uint8)
-        y = np.empty((2 * count), dtype=np.float16)
-        idx = 0
-        curr = self.curr_id
-        for entry in self.lines[curr:curr + count]:
-            # output = entry.split()
-            # entry = entry.replace(",", "")
-            [c_f, l_f, r_f, steering, throttle, breaks, speed] = entry.split(',')
-            # print steering, c_f
+        size_multiple = 1
+        if horizontal_flip:
+            size_multiple = 2
+
+        x = np.empty((size_multiple * count, HEIGHT, WIDTH, DEPTH), dtype=np.uint8)
+        y = np.empty((size_multiple * count), dtype=np.float16)
+
+        for idx, line in enumerate(self.lines[self.curr_id:self.curr_id + count]):
+            [c_f, l_f, r_f, steering, throttle, breaks, speed] = line.split(',')
+            print(steering, c_f)
+
             image_data = cv2.imread(c_f)
+            display_images(image_data, "Raw Input", 1)
             image_data = preprocess_image(image_data)
 
-            cv2.imshow("Raw Input", image_data)
-            cv2.waitKey(1)
-
-            curr += 1
-            if(curr > len(self.lines)):
-                curr = 0
-
-            self.curr_id = curr
+            self.curr_id += 1
+            if(self.curr_id > len(self.lines)):
+                self.curr_id = 0
 
             x[idx, :, :, :] = np.copy(image_data)
             y[idx] = np.copy(float(steering))
-            idx += 1
         return x, y
 
     def set_optimizer_params(self, learning_rate):
@@ -237,6 +236,14 @@ class Model(object):
         plt.show()
 
 
+def display_images(image_features, message, count, delay=500):
+    if image_features.ndim == 3:
+        image_features = [image_features]
+    for image in image_features:
+        cv2.imshow(message, image)
+        cv2.waitKey(delay)
+
+
 def main():
     model_filename = "model.json"
     model_filename = model_filename[:-5]
@@ -247,20 +254,20 @@ def main():
     # import ipdb; ipdb.set_trace()
 
     rows = model.read_csv(DRIVING_LOG)
-
-    n_train = int(len(rows) * TRAIN_SIZE)
-    x, y = model.rows_to_feature_labels(n_train, rows)
-
-    # for i in range(n_train):
-    #     x[n_train+i, :, :, :] = cv2.flip(x[i, :, :, :], 1)
-    #     y[n_train+i] = -1.0 * y[i]
-
-    # if SHOW_DATA:
-    #     for i in range(2*n_trai n):
-    #         cv2.imshow("ROI Input", x[i])
-    #         cv2.waitKey(1)
-
     # print ("Database size: {}".format(len(rows)))
+
+    horizontal_flip = False
+
+    n_train = int(len(rows) * TRAINING_PORTION)
+    x, y = model.rows_to_feature_labels(n_train, rows, horizontal_flip=horizontal_flip)
+
+    if horizontal_flip:
+        for i in range(n_train):
+            x[n_train + i, :, :, :] = cv2.flip(x[i, :, :, :], 1)
+            y[n_train + i] = -1.0 * y[i]
+
+    if SHOW_DATA:
+        display_images(x, "ROI Input", 2 * n_train)
 
     # model.set_optimizer_params(LEARNING_RATE)
     # hist = model.start_training(x, y)
