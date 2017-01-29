@@ -128,7 +128,7 @@ class Model(object):
             print(steering, c_f)
 
             image_data = cv2.imread(c_f)
-            display_images(image_data, "Raw Input", 1)
+            display_images(image_data, "Raw Input")
             image_data = preprocess_image(image_data)
 
             self.curr_id += 1
@@ -236,10 +236,22 @@ class Model(object):
         plt.show()
 
 
-def display_images(image_features, message, count, delay=500):
+def display_images(image_features, message=None, delay=500):
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    WHITE = (255, 255, 255)
+    FONT_THICKNESS = 1
+    # FONT_SCALE = 4
+
     if image_features.ndim == 3:
         image_features = [image_features]
+
+    height, width, depth = image_features[0].shape
+
     for image in image_features:
+        image = np.copy(image)  # Avoid Overwriting Original Image
+        if message:
+            text_position = (int(width * 0.05), int(height * 0.95))
+            cv2.putText(image, message, text_position, font, FONT_THICKNESS, WHITE)
         cv2.imshow(message, image)
         cv2.waitKey(delay)
 
@@ -266,8 +278,8 @@ def main():
             x[n_train + i, :, :, :] = cv2.flip(x[i, :, :, :], 1)
             y[n_train + i] = -1.0 * y[i]
 
-    if SHOW_DATA:
-        display_images(x, "ROI Input", 2 * n_train)
+    # if SHOW_DATA:
+    display_images(x, "ROI Input")
 
     # model.set_optimizer_params(LEARNING_RATE)
     # hist = model.start_training(x, y)
