@@ -1,41 +1,36 @@
-#!/usr/bin/env python
+#!/usr/bin/env ipython
 import os
 import cv2
-import matplotlib
 import numpy as np
+import pickle
 
 from keras.layers import Dense  # Activation
 from keras.layers.convolutional import Convolution2D
 from keras.layers.core import Dropout, Flatten
 from keras.models import load_model, model_from_json, Sequential
-from keras.optimizers import Adam  # SGD
+from keras.optimizers import Adam, SGD
 # from keras.regularizers import activity_l2,  l2
 from keras.utils.visualize_util import plot
 
-matplotlib.use('TkAgg')  # MacOSX Compatibility
-import matplotlib.pyplot as plt
-
 # Settings
-BATCH_SIZE = 32
+DEBUG = False
+BATCH_SIZE = 1
 NUM_EPOCHS = 1
-LEARNING_RATE = 0.0001
-MOMENTUM = 0.01
-REGULARIZE_PARAM = 0.1
-DECAY = 0.0
+TRAINING_PORTION = 1
 
+# Image Dimensions
 WIDTH = 200
 HEIGHT = 66
-DEPTH = 3
+DEPTH = 1
 
+# Image ROI Crop Percentage from [left, top, right, bottom]
+ROI_bbox = [0.0, 0.40, 0.0, 0.13]
+
+# Model Regularization
 DROPOUT = 0.1
 
+# Training Data
 DRIVING_LOG = "training/minimal/driving_log.csv"
-
-TRAINING_PORTION = 1.0
-SHOW_DATA = False
-
-# percentage of data to be cut from left, top, right, bottom
-ROI_bbox = [0.0, 0.40, 0.0, 0.13]
 
 
 def cut_ROI_bbox(image_data):
@@ -49,11 +44,26 @@ def cut_ROI_bbox(image_data):
     return ROI_data
 
 
+def rgb_to_grayscale(img):
+    return cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+
+def normalize_grayscale(imgray):
+    a = -0.5
+    b = 0.5
+    grayscale_min = 0
+    grayscale_max = 255
+    return a + ( ( (imgray - grayscale_min)*(b - a) )/( grayscale_max - grayscale_min ) )
+
+
 def preprocess_image(image):
     """ Resize and Crop Image """
-    ROI_data = cut_ROI_bbox(image)
-    processed_data = cv2.resize(ROI_data, (WIDTH, HEIGHT))
-    return processed_data
+    gray = rgb_to_grayscale(image)
+    cropped = cut_ROI_bbox(gray)
+    resized = cv2.resize(cropped, (WIDTH, HEIGHT))
+    normalized = normalize_grayscale(resized)
+    reshaped = normalized.reshape(HEIGHT, WIDTH, DEPTH)
+    return reshaped
 
 
 class Model(object):
@@ -62,115 +72,81 @@ class Model(object):
         # Model Definition
         self.filename = filename
         if os.path.isfile(filename + '.h5'):
-            self.model = self.load(filename)
+            self.model = self.load()
         else:
             self.model = self._define_model()
 
-        # Data Definition
-        self.y = list()
-        self.x = np.empty((BATCH_SIZE, HEIGHT, WIDTH, DEPTH), dtype=np.uint8)
-
-        # Bookkeeping?
-        self.curr_id = 0
-
     def load(self):
-        self.model = self.load_model_with_weights(self.filename)
+        return self.load_model_with_weights(self.filename)
 
     def _define_model(self):
         """
             nVidia End to End Learning Model
         """
 
-        conv_kernal = 5
-        model = Sequential()
-        model.add(Convolution2D(24, 5, 5, name='Conv1', border_mode='same', subsample=(2, 2), input_shape=(HEIGHT, WIDTH, DEPTH), activation='relu'))
-        model.add(Convolution2D(36, 5, 5, name='Conv2', border_mode='same', subsample=(2, 2), activation='relu'))
-        model.add(Convolution2D(48, 5, 5, name='Conv3', border_mode='same', subsample=(2, 2), activation='relu'))
-        model.add(Convolution2D(64, 3, 3, name='Conv4', border_mode='same', subsample=(1, 1), activation='relu'))
-        model.add(Convolution2D(64, 3, 3, name='Conv5', border_mode='same', subsample=(1, 1), activation='relu'))
+        self.model = Sequential()
+        self.model.add(Convolution2D(24, 5, 5, name='Conv1', init='glorot_normal', subsample=(2, 2), input_shape=(HEIGHT, WIDTH, DEPTH), activation='relu'))
+        self.model.add(Convolution2D(36, 5, 5, name='Conv2', init='glorot_normal', subsample=(2, 2), activation='relu'))
+        self.model.add(Convolution2D(48, 5, 5, name='Conv3', init='glorot_normal', subsample=(2, 2), activation='relu'))
+        self.model.add(Convolution2D(64, 3, 3, name='Conv4', init='glorot_normal', subsample=(1, 1), activation='relu'))
+        self.model.add(Convolution2D(64, 3, 3, name='Conv5', init='glorot_normal', subsample=(1, 1), activation='relu'))
 
-        model.add(Flatten(name='Flatten'))
-        model.add(Dense(1164, name='Dense1'))
-        # model.add(Dropout(DROPOUT))
-        model.add(Dense(100, name='Dense2', activation='relu'))
-        # model.add(Dropout(DROPOUT))
-        model.add(Dense(50, name='Dense3', activation='relu'))
-        # model.add(Dropout(DROPOUT))
-        model.add(Dense(10, name='Dense4', activation='relu'))
-        model.add(Dense(1, name='Dense5', activation='softmax'))
+        self.model.add(Flatten(name='Flatten'))
+        self.model.add(Dense(1164, name='Dense1'))
+        # self.model.add(Dropout(DROPOUT))
+        self.model.add(Dense(100, name='Dense2', activation='relu'))
+        # self.model.add(Dropout(DROPOUT))
+        self.model.add(Dense(50, name='Dense3', activation='relu'))
+        # self.model.add(Dropout(DROPOUT))
+        self.model.add(Dense(10, name='Dense4', activation='relu'))
+        self.model.add(Dense(1, name='Dense5', activation='softmax'))
 
-        return model
+        return self.model
 
-    def create_random_data(batches):
-        x = np.random.random((BATCH_SIZE * batches, HEIGHT, WIDTH, DEPTH))
-        y = np.random.randint(2, size=(BATCH_SIZE * batches, 1))
-        return x, y
+    # def create_random_data(batches):
+    #     x = np.random.random((BATCH_SIZE * batches, HEIGHT, WIDTH, DEPTH))
+    #     y = np.random.randint(2, size=(BATCH_SIZE * batches, 1))
+    #     return x, y
 
     def read_csv(self, filename):
         self.lines = []
         with open(filename, 'r') as dbfile:
             self.lines = dbfile.readlines()
-            # lines.append(dbfile.readlines())
         return self.lines
 
-    def rows_to_feature_labels(self, count, rows, horizontal_flip=True):
+    def rows_to_feature_labels(self, count, horizontal_flip=True):
         # Allocate twice the size to accomodate
         # both original and horizontally flipped images
         size_multiple = 1
         if horizontal_flip:
             size_multiple = 2
 
-        x = np.empty((size_multiple * count, HEIGHT, WIDTH, DEPTH), dtype=np.uint8)
-        y = np.empty((size_multiple * count), dtype=np.float16)
+        x = np.empty((size_multiple * count, HEIGHT, WIDTH, DEPTH), dtype=np.float32)
+        y = np.empty((size_multiple * count), dtype=np.float32)
 
-        for idx, line in enumerate(self.lines[self.curr_id:self.curr_id + count]):
-            [c_f, l_f, r_f, steering, throttle, breaks, speed] = line.split(',')
-            print(steering, c_f)
+        for idx, line in enumerate(self.lines[:count]):
+            [center, left, right, steering, throttle, breaks, speed] = line.split(',')
+            if DEBUG: print(idx, steering)
 
-            image_data = cv2.imread(c_f)
-            display_images(image_data, "Raw Input")
+            image_data = cv2.imread(center)
+            message = 'Raw Input: {:.2}'.format(steering)
+            display_images(image_data, message)
+
             image_data = preprocess_image(image_data)
-
-            self.curr_id += 1
-            if(self.curr_id > len(self.lines)):
-                self.curr_id = 0
-
             x[idx, :, :, :] = np.copy(image_data)
             y[idx] = np.copy(float(steering))
+
         return x, y
 
-    def set_optimizer_params(self, learning_rate):
-        Adam_optimizer = Adam(lr=learning_rate, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=DECAY)
-        self.model.compile(loss='mean_squared_error', optimizer=Adam_optimizer, metrics=['accuracy'])
+    def set_optimizer(self):
+        # optimizer = Adam()
+        optimizer = SGD(lr=0.00001)
+        self.model.compile(loss='mean_squared_error', optimizer=optimizer, metrics=['accuracy'])
 
-    def start_training(self, x, y):
-        # sgd = SGD(lr=LEARNING_RATE) #, momentum=MOMENTUM, decay=DECAY, nesterov=False)
-        # self.model.compile(loss='mean_squared_error', optimizer=sgd, metrics=['accuracy'])
-        hist = self.model.fit(x, y, nb_epoch=NUM_EPOCHS, batch_size=BATCH_SIZE, shuffle=True,
-                              validation_split=0.2)
-        return hist
-
-    # def train_model(self, X_train, y_train):
-    #     h = self.model.fit(X_train, y_train,
-    #                        nb_epoch = 1, verbose=0,
-    #                        batch_size=training_batch_size)
-    #     self.model.save_weights(checkpoint_filename)
-    #     print('loss : ',h.history['loss'][-1])
-    #     return model
-
-    def train_with_input(self, x_in, y_in):
-        curr_id = len(self.y)
-        self.x[curr_id, :, :, :] = x_in
-        self.y.append(y_in)
-        if len(self.y) == BATCH_SIZE:
-            y = np.array(self.y)
-            # x = np.array(self.x)
-            print("lr: ", self.model.optimizer.get_config()['lr'])
-            hist = self.model.fit(self.x, y, nb_epoch=1, batch_size=BATCH_SIZE, verbose=1, validation_data=(self.x, self.y))
-            self.y = []
-            return hist
-        else:
-            return None
+    def train(self, x, y):
+        history = self.model.fit(x, y, nb_epoch=NUM_EPOCHS, batch_size=BATCH_SIZE, shuffle=True,
+                                 validation_split=0.2)
+        return history
 
     def save_model_to_json_file(self, filename):
         json_string = self.model.to_json()
@@ -198,45 +174,9 @@ class Model(object):
         cv2.imshow("model", model_image)
         cv2.waitKey(0)
 
-    def plot_metrics(self, history):
-        # import pdb; pdb.set_trace()
-        print(history.history.keys())
-        # summarize history for accuracy
-        plt.plot(history.history['acc'])
-        plt.plot(history.history['val_acc'])
-        plt.title('model accuracy')
-        plt.ylabel('accuracy')
-        plt.xlabel('epoch')
-        plt.legend(['train', 'test'], loc='upper right')
-        plt.show()
-        # summarize history for loss
-        plt.plot(history.history['loss'])
-        plt.plot(history.history['val_loss'])
-        plt.title('model loss')
-        plt.ylabel('loss')
-        plt.xlabel('epoch')
-        plt.legend(['train', 'test'], loc='upper right')
-        plt.show()
-
-    def plot_predictions(self, x, y):
-        orig_steer = []
-        pred_steering_angle = []
-        orig_steer = y.tolist()
-
-        for image in x:
-            pred_steering_angle.append(float(self.model.predict(image[None, :, :, :], batch_size=1)))
-
-        print(len(orig_steer), len(pred_steering_angle))
-        plt.plot(orig_steer)
-        plt.plot(pred_steering_angle)
-        plt.xlabel('frame')
-        plt.ylim([-15, 15])
-        plt.ylabel('steering angle')
-        plt.legend(['original', 'predicted'], loc='upper right')
-        plt.show()
-
 
 def display_images(image_features, message=None, delay=500):
+    if not DEBUG: return
     font = cv2.FONT_HERSHEY_SIMPLEX
     WHITE = (255, 255, 255)
     FONT_THICKNESS = 1
@@ -257,36 +197,35 @@ def display_images(image_features, message=None, delay=500):
 
 
 def main():
-    model_filename = "model.json"
+    model_filename = "save/model.json"
     model_filename = model_filename[:-5]
     model = Model(model_filename)
 
     # model.plot_model_to_file(model_filename)
     # model.show_model_from_image(model_filename)
-    # import ipdb; ipdb.set_trace()
 
     rows = model.read_csv(DRIVING_LOG)
-    # print ("Database size: {}".format(len(rows)))
+    if DEBUG: print ("Database size: {}".format(len(rows)))
 
     horizontal_flip = False
 
     n_train = int(len(rows) * TRAINING_PORTION)
-    x, y = model.rows_to_feature_labels(n_train, rows, horizontal_flip=horizontal_flip)
+    x, y = model.rows_to_feature_labels(n_train, horizontal_flip=horizontal_flip)
 
     if horizontal_flip:
         for i in range(n_train):
             x[n_train + i, :, :, :] = cv2.flip(x[i, :, :, :], 1)
             y[n_train + i] = -1.0 * y[i]
 
-    # if SHOW_DATA:
     display_images(x, "ROI Input")
 
-    # model.set_optimizer_params(LEARNING_RATE)
-    # hist = model.start_training(x, y)
-    # model.save_model_to_json_file(model_filename)
-    # model.save_model_weights(model_filename)
-    # #model.plot_metrics(hist)
-    # model.plot_predictions(x, y)
+    model.set_optimizer()
+    history = model.train(x, y)
+    model.save_model_to_json_file(model_filename)
+    model.save_model_weights(model_filename)
+
+    # Pickle Dump
+    pickle.dump([history.history, x, y], open('save/hist_xy.p', 'wb'))
 
 
 if __name__ == '__main__':
