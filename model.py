@@ -18,7 +18,7 @@ from keras.utils.visualize_util import plot
 DEBUG = True
 DISPLAY_IMAGES = True
 BATCH_SIZE = 1
-NUM_EPOCHS = 30
+NUM_EPOCHS = 2
 TRAINING_PORTION = 1
 HZFLIP = False
 
