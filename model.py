@@ -15,8 +15,12 @@ from keras.utils.visualize_util import plot
 # Settings
 DEBUG = False
 BATCH_SIZE = 1
-NUM_EPOCHS = 1
+NUM_EPOCHS = 2
 TRAINING_PORTION = 1
+HZFLIP = False
+
+# Steering Miltiplier
+STEERING_MULTIPLIER = 100
 
 # Image Dimensions
 WIDTH = 200
@@ -30,7 +34,9 @@ ROI_bbox = [0.0, 0.40, 0.0, 0.13]
 DROPOUT = 0.1
 
 # Training Data
-DRIVING_LOG = "training/minimal/driving_log.csv"
+# DATA_DIR = "training/data/"               # Udacity Data
+DATA_DIR = "training/minimal/"              # Left, Center, Right
+DRIVING_LOG = DATA_DIR + "driving_log.csv"
 
 
 def cut_ROI_bbox(image_data):
@@ -114,11 +120,11 @@ class Model(object):
             self.lines = dbfile.readlines()
         return self.lines
 
-    def rows_to_feature_labels(self, count, horizontal_flip=True):
+    def rows_to_feature_labels(self, count, hzflip=False):
         # Allocate twice the size to accomodate
         # both original and horizontally flipped images
         size_multiple = 1
-        if horizontal_flip:
+        if HZFLIP:
             size_multiple = 2
 
         x = np.empty((size_multiple * count, HEIGHT, WIDTH, DEPTH), dtype=np.float32)
@@ -126,22 +132,24 @@ class Model(object):
 
         for idx, line in enumerate(self.lines[:count]):
             [center, left, right, steering, throttle, breaks, speed] = line.split(',')
+
+            steering = float(steering) * STEERING_MULTIPLIER
             if DEBUG: print(idx, steering)
 
-            image_data = cv2.imread(center)
+            image_data = cv2.imread(DATA_DIR + center)
             message = 'Raw Input: {:.2}'.format(steering)
             display_images(image_data, message)
 
             image_data = preprocess_image(image_data)
             x[idx, :, :, :] = np.copy(image_data)
-            y[idx] = np.copy(float(steering))
+            y[idx] = np.copy(steering)
 
         return x, y
 
     def set_optimizer(self):
         # optimizer = Adam()
-        optimizer = SGD(lr=0.00001)
-        self.model.compile(loss='mean_squared_error', optimizer=optimizer, metrics=['accuracy'])
+        optimizer = SGD(lr=0.01)
+        self.model.compile(loss='mean_squared_error', optimizer=optimizer, metrics=['mean_squared_error'])
 
     def train(self, x, y):
         history = self.model.fit(x, y, nb_epoch=NUM_EPOCHS, batch_size=BATCH_SIZE, shuffle=True,
@@ -207,25 +215,24 @@ def main():
     rows = model.read_csv(DRIVING_LOG)
     if DEBUG: print ("Database size: {}".format(len(rows)))
 
-    horizontal_flip = False
-
     n_train = int(len(rows) * TRAINING_PORTION)
-    x, y = model.rows_to_feature_labels(n_train, horizontal_flip=horizontal_flip)
+    # x, y = model.rows_to_feature_labels(3, hzflip=HZFLIP)
+    X_train, y_train = model.rows_to_feature_labels(n_train, hzflip=HZFLIP)
 
-    if horizontal_flip:
+    if HZFLIP:
         for i in range(n_train):
-            x[n_train + i, :, :, :] = cv2.flip(x[i, :, :, :], 1)
-            y[n_train + i] = -1.0 * y[i]
+            X_train[n_train + i, :, :, :] = cv2.flip(X_train[i, :, :, :], 1)
+            y_train[n_train + i] = -1.0 * y_train[i]
 
-    display_images(x, "ROI Input")
+    display_images(X_train, "ROI Input")
 
     model.set_optimizer()
-    history = model.train(x, y)
+    history = model.train(X_train, y_train)
     model.save_model_to_json_file(model_filename)
     model.save_model_weights(model_filename)
 
     # Pickle Dump
-    pickle.dump([history.history, x, y], open('save/hist_xy.p', 'wb'))
+    pickle.dump([history.history, X_train, y_train], open('save/hist_xy.p', 'wb'))
 
 
 if __name__ == '__main__':

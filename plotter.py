@@ -13,18 +13,21 @@ class ModelPlotter(object):
     @classmethod
     def plot_metrics(cls, history):
         # print(history.keys())
-        # summarize history for accuracy
-        plt.plot(history['acc'])
-        plt.plot(history['val_acc'])
-        plt.title('model accuracy')
-        plt.ylabel('accuracy')
+        # summarize history for MSE
+        plt.plot(history['mean_squared_error'])
+        plt.plot(history['val_mean_squared_error'])
+        plt.title('Model Error')
+        plt.ylabel('Error')
         plt.xlabel('epoch')
         plt.legend(['train', 'test'], loc='upper right')
-        plt.show()
+        # plt.show()
+        plt.savefig('save/ModelError')
+        plt.close()
+
         # summarize history for loss
         plt.plot(history['loss'])
         plt.plot(history['val_loss'])
-        plt.title('model loss')
+        plt.title('Model Loss')
         plt.ylabel('loss')
         plt.xlabel('epoch')
         plt.legend(['train', 'test'], loc='upper right')
@@ -43,6 +46,7 @@ class ModelPlotter(object):
             pred_steering_angle.append(float(model.predict(image[None, :, :, :], batch_size=1)))
 
         print(len(orig_steer), len(pred_steering_angle))
+        plt.title('Predictions')
         plt.plot(orig_steer)
         plt.plot(pred_steering_angle)
         plt.xlabel('frame')
