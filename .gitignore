@@ -90,3 +90,4 @@ ENV/
 
 # Mac Database
 .DS_Store
+__MACOSX

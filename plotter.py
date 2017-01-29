@@ -50,12 +50,11 @@ class ModelPlotter(object):
         plt.plot(orig_steer)
         plt.plot(pred_steering_angle)
         plt.xlabel('frame')
-        plt.ylim([-15, 15])
+        # plt.ylim([-15, 15])
         plt.ylabel('steering angle')
         plt.legend(['original', 'predicted'], loc='upper right')
         # plt.show()
         plt.savefig('save/predictions')
-
 
 
 def main():
@@ -73,7 +72,7 @@ def main():
     ModelPlotter.plot_metrics(history)
     ModelPlotter.plot_predictions(model, x, y)
 
-    import gc; gc.collect()
+    import gc; gc.collect()  # Suppress a Keras Tensorflow Bug
 
 if __name__ == '__main__':
     main()

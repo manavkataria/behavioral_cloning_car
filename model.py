@@ -3,7 +3,9 @@ import os
 import cv2
 import numpy as np
 import pickle
+import random
 
+from sklearn.utils import shuffle
 from keras.layers import Dense  # Activation
 from keras.layers.convolutional import Convolution2D
 from keras.layers.core import Dropout, Flatten
@@ -13,9 +15,9 @@ from keras.optimizers import Adam, SGD
 from keras.utils.visualize_util import plot
 
 # Settings
-DEBUG = False
+DEBUG = True
 BATCH_SIZE = 1
-NUM_EPOCHS = 2
+NUM_EPOCHS = 20
 TRAINING_PORTION = 1
 HZFLIP = False
 
@@ -133,7 +135,8 @@ class Model(object):
         for idx, line in enumerate(self.lines[:count]):
             [center, left, right, steering, throttle, breaks, speed] = line.split(',')
 
-            steering = float(steering) * STEERING_MULTIPLIER
+            # Adding Random Perturbations between [-5, 5] to each input
+            steering = float(steering) * STEERING_MULTIPLIER + random.randint(-50, 50) / 10.0
             if DEBUG: print(idx, steering)
 
             image_data = cv2.imread(DATA_DIR + center)
@@ -218,6 +221,8 @@ def main():
     n_train = int(len(rows) * TRAINING_PORTION)
     # x, y = model.rows_to_feature_labels(3, hzflip=HZFLIP)
     X_train, y_train = model.rows_to_feature_labels(n_train, hzflip=HZFLIP)
+    X_train, y_train = shuffle(X_train, y_train, random_state=1)
+
 
     if HZFLIP:
         for i in range(n_train):
