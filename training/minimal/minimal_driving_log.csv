@@ -1,3 +1,10 @@
 IMG/center_2017_01_16_18_49_00_738.jpg,,,0.50,0,0,24.68497
 IMG/center_2017_01_16_18_49_02_100.jpg,,,0.01,0,0,21.50944
 IMG/center_2017_01_16_18_49_04_959.jpg,,,-0.50,0,0,16.02238
+
+
+driving_log[
+            (driving_log['center'] == 'IMG/center_2016_12_01_13_38_42_894.jpg') |  # steer > 0
+            (driving_log['center'] == 'IMG/center_2016_12_01_13_39_28_024.jpg') |  # steer < 0
+            (driving_log['center'] == 'IMG/center_2016_12_01_13_30_48_287.jpg')  # steer 0
+            ]

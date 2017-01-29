@@ -16,8 +16,9 @@ from keras.utils.visualize_util import plot
 
 # Settings
 DEBUG = True
+DISPLAY_IMAGES = True
 BATCH_SIZE = 1
-NUM_EPOCHS = 20
+NUM_EPOCHS = 30
 TRAINING_PORTION = 1
 HZFLIP = False
 
@@ -80,6 +81,7 @@ class Model(object):
         # Model Definition
         self.filename = filename
         if os.path.isfile(filename + '.h5'):
+            if DEBUG: print ("Loading Model:", filename + '.h5')
             self.model = self.load()
         else:
             self.model = self._define_model()
@@ -107,7 +109,7 @@ class Model(object):
         self.model.add(Dense(50, name='Dense3', activation='relu'))
         # self.model.add(Dropout(DROPOUT))
         self.model.add(Dense(10, name='Dense4', activation='relu'))
-        self.model.add(Dense(1, name='Dense5', activation='softmax'))
+        self.model.add(Dense(1, name='Dense5'))
 
         return self.model
 
@@ -150,13 +152,18 @@ class Model(object):
         return x, y
 
     def set_optimizer(self):
-        # optimizer = Adam()
-        optimizer = SGD(lr=0.01)
+        optimizer = Adam()
+        # optimizer = SGD(lr=0.0001)
         self.model.compile(loss='mean_squared_error', optimizer=optimizer, metrics=['mean_squared_error'])
 
     def train(self, x, y):
         history = self.model.fit(x, y, nb_epoch=NUM_EPOCHS, batch_size=BATCH_SIZE, shuffle=True,
-                                 validation_split=0.2)
+                                 validation_split=0.5)
+        return history
+
+    def train_generator(self, generator):
+        history = self.model.fit(generator, nb_epoch=NUM_EPOCHS, batch_size=BATCH_SIZE, shuffle=True,
+                                 validation_split=0.5)
         return history
 
     def save_model_to_json_file(self, filename):
@@ -187,7 +194,7 @@ class Model(object):
 
 
 def display_images(image_features, message=None, delay=500):
-    if not DEBUG: return
+    if not DISPLAY_IMAGES: return
     font = cv2.FONT_HERSHEY_SIMPLEX
     WHITE = (255, 255, 255)
     FONT_THICKNESS = 1
@@ -235,6 +242,9 @@ def main():
     history = model.train(X_train, y_train)
     model.save_model_to_json_file(model_filename)
     model.save_model_weights(model_filename)
+
+    predictions = model.model.predict_on_batch(X_train)
+    print("Predictions:", list(zip(predictions, y_train, predictions-y_train)))
 
     # Pickle Dump
     pickle.dump([history.history, X_train, y_train], open('save/hist_xy.p', 'wb'))

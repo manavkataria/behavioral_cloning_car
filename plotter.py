@@ -19,21 +19,21 @@ class ModelPlotter(object):
         plt.title('Model Error')
         plt.ylabel('Error')
         plt.xlabel('epoch')
-        plt.legend(['train', 'test'], loc='upper right')
+        plt.legend(['training', 'validation'], loc='upper right')
         # plt.show()
         plt.savefig('save/ModelError')
         plt.close()
 
         # summarize history for loss
-        plt.plot(history['loss'])
-        plt.plot(history['val_loss'])
-        plt.title('Model Loss')
-        plt.ylabel('loss')
-        plt.xlabel('epoch')
-        plt.legend(['train', 'test'], loc='upper right')
-        # plt.show()
-        plt.savefig('save/history')
-        plt.close()
+        # plt.plot(history['loss'])
+        # plt.plot(history['val_loss'])
+        # plt.title('Model Loss')
+        # plt.ylabel('loss')
+        # plt.xlabel('epoch')
+        # plt.legend(['training', 'validation'], loc='upper right')
+        # # plt.show()
+        # plt.savefig('save/history')
+        # plt.close()
 
     @classmethod
     def plot_predictions(cls, model, x, y):
@@ -45,7 +45,7 @@ class ModelPlotter(object):
         for image in x:
             pred_steering_angle.append(float(model.predict(image[None, :, :, :], batch_size=1)))
 
-        print(len(orig_steer), len(pred_steering_angle))
+        # print(len(orig_steer), len(pred_steering_angle))
         plt.title('Predictions')
         plt.plot(orig_steer)
         plt.plot(pred_steering_angle)
@@ -64,13 +64,23 @@ def main():
 
     # Load Model & data
     model = Model(model_filename)
-
     model = model.model
 
+    history, X_train, y_train = pickle.load(open('save/hist_xy.p', 'rb'))
+
+    # Print Predictions:
+    predictions = model.model.predict_on_batch(X_train)
+    for i in range(len(predictions)):
+        print("Prediction[{i}]: ({diff}) = ({pred}) - ({y_train})".format(
+               i=i,
+               diff=int(predictions[i][0] - y_train[i]),
+               pred=int(predictions[i][0]),
+               y_train=int(y_train[i])))
+    # print("Predictions:", list(map(lambda x: (int(x[0]), int(x[1]), int(x[2])), zip(predictions, y_train, predictions-y_train))))
+
     # Plot
-    history, x, y = pickle.load(open('save/hist_xy.p', 'rb'))
     ModelPlotter.plot_metrics(history)
-    ModelPlotter.plot_predictions(model, x, y)
+    ModelPlotter.plot_predictions(model, X_train, y_train)
 
     import gc; gc.collect()  # Suppress a Keras Tensorflow Bug
 
