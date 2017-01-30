@@ -22,10 +22,12 @@ from keras.preprocessing.image import ImageDataGenerator
 
 # Settings
 DEBUG = True
-DISPLAY_IMAGES = True
+DISPLAY_IMAGES = False
 BATCH_SIZE = 1
 NUM_EPOCHS = 50
 TRAINING_PORTION = 1
+TRAINING_ENABLE = True
+FIT_GENERATOR_ENABLE = True
 
 # OpenCV Flip Type for Horizontal Flipping
 CV_FLIPTYPE_HORIZONTAL = 1
@@ -42,7 +44,7 @@ DEPTH = 1
 ROI_bbox = [0.0, 0.40, 0.0, 0.13]
 
 # Model Regularization
-DROPOUT = 0.1
+# DROPOUT = 0.1
 
 # Training Data
 # DATA_DIR = "training/data/"               # Udacity Data
@@ -51,7 +53,7 @@ DRIVING_LOG = DATA_DIR + "driving_log.csv"
 
 
 # Data Augmentation
-HZFLIP = True
+HZ_FLIP_ENABLE = True
 HORIZONTAL_SHIFT_RANGE_PCT = 0.1
 VERTICAL_SHIFT_RANGE_PCT = 0.1
 SAVE_TO_DIR = DATA_DIR
@@ -144,7 +146,7 @@ class Model(object):
         # Allocate twice the size to accomodate
         # both original and horizontally flipped images
         size_multiple = 1
-        if HZFLIP:
+        if HZ_FLIP_ENABLE:
             size_multiple = 2
 
         x = np.empty((size_multiple * count, HEIGHT, WIDTH, DEPTH), dtype=np.float32)
@@ -189,28 +191,40 @@ class Model(object):
     def train_and_validate_with_generator(self,
                                           X_train,
                                           y_train,
-                                          validation_split=0.2,
+                                          validation_split=0.5,
                                           nb_epochs=NUM_EPOCHS,
                                           batch_size=BATCH_SIZE,
-                                          manual=False):
-        # Setup Parameters
+                                          manual=True):
+        # Setup Split Parameters
         training_split = (1 - validation_split)
-        samples_per_epoch_train = len(X_train) * training_split
-        samples_per_epoch_val = len(X_train) * validation_split
+        samples_per_epoch_train = int(len(X_train) * training_split)
+        samples_per_epoch_val = int(len(X_train) * validation_split)
+
+        # Setup Image Generator
         data_gen_args = dict(width_shift_range=HORIZONTAL_SHIFT_RANGE_PCT,
                              height_shift_range=VERTICAL_SHIFT_RANGE_PCT)
         train_datagen = ImageDataGenerator(**data_gen_args)
         val_datagen = ImageDataGenerator(**data_gen_args)
+        train_generator = train_datagen.flow(X_train, y_train, batch_size=BATCH_SIZE)
+        val_generator = val_datagen.flow(X_train, y_train, batch_size=BATCH_SIZE)
 
-        # Train
-        if manual:
-            history = self.model.fit_generator(train_datagen, samples_per_epoch_train, nb_epochs, validation_data=val_datagen, nb_val_samples=samples_per_epoch_val)
+        # Fit
+        if DEBUG: print("Running Fit Generator (Manual={})".format(manual))
+        if not manual:
+            history = self.model.fit_generator(
+                                    train_generator,
+                                    samples_per_epoch_train,
+                                    nb_epochs,
+                                    validation_data=val_generator,
+                                    nb_val_samples=samples_per_epoch_val)
         else:
-            history = self.fit_train_and_validate_with_generator_manual(train_datagen, samples_per_epoch_train, nb_epochs, validation_data=val_datagen, nb_val_samples=samples_per_epoch_val)
+            history = self.fit_train_and_validate_with_generator_manual(train_generator, samples_per_epoch_train, nb_epochs, validation_data=val_generator, nb_val_samples=samples_per_epoch_val)
 
         return history
 
     def fit_train_and_validate_with_generator_manual(self,
+                                                     X_train,
+                                                     y_train,
                                                      train_datagen,
                                                      samples_per_epoch_train,
                                                      nb_epochs,
@@ -300,20 +314,24 @@ def main():
 
     # model.plot_model_to_file(model_filename)
     # model.show_model_from_image(model_filename)
-
     rows = model.read_csv(DRIVING_LOG)
-    if DEBUG: print ("Database size: {}".format(len(rows)))
-
     n_train = int(len(rows) * TRAINING_PORTION)
-    X_train, y_train = model.rows_to_feature_labels(n_train, hzflip=HZFLIP)
+    if DEBUG: print ("Using Training Dataset Size: {}".format(n_train))
+
+    X_train, y_train = model.rows_to_feature_labels(n_train, hzflip=HZ_FLIP_ENABLE)
     X_train, y_train = shuffle(X_train, y_train, random_state=1)
 
-    display_images(X_train, "ROI")
+    if TRAINING_ENABLE:
+        display_images(X_train, "ROI")
 
-    model.set_optimizer()
-    history = model.train(X_train, y_train)
-    model.save_model_to_json_file(model_filename)
-    model.save_model_weights(model_filename)
+        model.set_optimizer()
+        if FIT_GENERATOR_ENABLE:
+            history = model.train_and_validate_with_generator(X_train, y_train, manual=False)
+        else:
+            history = model.train(X_train, y_train)
+
+        model.save_model_to_json_file(model_filename)
+        model.save_model_weights(model_filename)
 
     predictions = model.model.predict_on_batch(X_train)
     for i in range(len(predictions)):
@@ -325,6 +343,7 @@ def main():
 
     # Pickle Dump
     pickle.dump([history.history, X_train, y_train], open('save/hist_xy.p', 'wb'))
+    import gc; gc.collect()  # Suppress a Keras Tensorflow Bug
 
 
 if __name__ == '__main__':

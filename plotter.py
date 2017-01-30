@@ -22,7 +22,8 @@ class ModelPlotter(object):
         plt.xlabel('Epoch')
         plt.legend(['training', 'validation'])
         # plt.show()
-        plt.savefig('save/ModelError')
+        plt.grid(b=True, which='both')
+        plt.savefig('save/loss')
         plt.close()
 
     @classmethod
@@ -44,7 +45,9 @@ class ModelPlotter(object):
         plt.ylabel('steering angle')
         plt.legend(['original', 'predicted'])
         # plt.show()
+        plt.grid(b=True, which='both')
         plt.savefig('save/predictions')
+        plt.close()
 
 
 def main():
