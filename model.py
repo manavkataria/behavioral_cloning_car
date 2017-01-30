@@ -13,20 +13,19 @@ from keras.models import load_model, model_from_json, Sequential
 from keras.optimizers import Adam, SGD
 # from keras.regularizers import activity_l2,  l2
 from keras.utils.visualize_util import plot
+from keras.preprocessing.image import ImageDataGenerator
 
 # Next Steps:
 # 1. Use fit_generator, and maybe ImageDataGenerator
-# 2. Horizontal Flipping
+# 2. Horizontal Flipping (Done)
 # 3. Balancing Input Dataset using binning
 
 # Settings
 DEBUG = True
 DISPLAY_IMAGES = True
 BATCH_SIZE = 1
-NUM_EPOCHS = 15
+NUM_EPOCHS = 50
 TRAINING_PORTION = 1
-HZFLIP = True
-
 
 # OpenCV Flip Type for Horizontal Flipping
 CV_FLIPTYPE_HORIZONTAL = 1
@@ -49,6 +48,14 @@ DROPOUT = 0.1
 # DATA_DIR = "training/data/"               # Udacity Data
 DATA_DIR = "training/minimal/"              # Left, Center, Right
 DRIVING_LOG = DATA_DIR + "driving_log.csv"
+
+
+# Data Augmentation
+HZFLIP = True
+HORIZONTAL_SHIFT_RANGE_PCT = 0.1
+VERTICAL_SHIFT_RANGE_PCT = 0.1
+SAVE_TO_DIR = DATA_DIR
+SAVE_PREFIX = 'augmented_'
 
 
 def cut_ROI_bbox(image_data):
@@ -151,7 +158,7 @@ class Model(object):
             if DEBUG: print(idx, steering)
 
             image_data = cv2.imread(DATA_DIR + center)
-            message = 'Raw Input: {:.2}'.format(steering)
+            message = 'Angle: {:=+03d}'.format(int(steering))
             display_images(image_data, message)
 
             image_data = preprocess_image(image_data)
@@ -179,9 +186,63 @@ class Model(object):
                                  validation_split=0.5)
         return history
 
-    def train_generator(self, generator):
-        history = self.model.fit_generator(generator, nb_epoch=NUM_EPOCHS, batch_size=BATCH_SIZE, shuffle=True,
-                                 validation_split=0.5)
+    def train_and_validate_with_generator(self,
+                                          X_train,
+                                          y_train,
+                                          validation_split=0.2,
+                                          nb_epochs=NUM_EPOCHS,
+                                          batch_size=BATCH_SIZE,
+                                          manual=False):
+        # Setup Parameters
+        training_split = (1 - validation_split)
+        samples_per_epoch_train = len(X_train) * training_split
+        samples_per_epoch_val = len(X_train) * validation_split
+        data_gen_args = dict(width_shift_range=HORIZONTAL_SHIFT_RANGE_PCT,
+                             height_shift_range=VERTICAL_SHIFT_RANGE_PCT)
+        train_datagen = ImageDataGenerator(**data_gen_args)
+        val_datagen = ImageDataGenerator(**data_gen_args)
+
+        # Train
+        if manual:
+            history = self.model.fit_generator(train_datagen, samples_per_epoch_train, nb_epochs, validation_data=val_datagen, nb_val_samples=samples_per_epoch_val)
+        else:
+            history = self.fit_train_and_validate_with_generator_manual(train_datagen, samples_per_epoch_train, nb_epochs, validation_data=val_datagen, nb_val_samples=samples_per_epoch_val)
+
+        return history
+
+    def fit_train_and_validate_with_generator_manual(self,
+                                                     train_datagen,
+                                                     samples_per_epoch_train,
+                                                     nb_epochs,
+                                                     validation_data,
+                                                     nb_val_samples,
+                                                     verbose=1):
+        # Manual Mode
+        for e in range(nb_epochs):
+            if verbose == 1:
+                print('Epoch', e)
+            batches = 0
+
+            # Training
+            for X_batch, y_batch in train_datagen.flow(X_train,
+                                                       y_train,
+                                                       batch_size=int(batch_size * training_split)):
+                loss = self.model.train(X_batch, y_batch)
+                batches += 1
+                if batches >= len(X_train) / batch_size:
+                    break
+
+            # Validation
+            for X_batch, y_batch in val_datagen.flow(X_train,
+                                                     y_train,
+                                                     batch_size=int(batch_size * validation_split)):
+                val_loss = self.model.evaluate(X_batch, y_batch)
+                batches += 1
+                if batches >= len(X_train) / batch_size:
+                    break
+
+        history = {'loss': loss, 'val_loss': val_loss}
+
         return history
 
     def save_model_to_json_file(self, filename):
@@ -247,7 +308,7 @@ def main():
     X_train, y_train = model.rows_to_feature_labels(n_train, hzflip=HZFLIP)
     X_train, y_train = shuffle(X_train, y_train, random_state=1)
 
-    display_images(X_train, "ROI Input")
+    display_images(X_train, "ROI")
 
     model.set_optimizer()
     history = model.train(X_train, y_train)

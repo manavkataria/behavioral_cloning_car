@@ -1,6 +1,6 @@
 #!/bin/bash -x
 
-# rm -f save/*
+rm -f save/*
 case "$OSTYPE" in
   darwin*)  PLATFORM="OSX" ;;
   linux*)   PLATFORM="linux" ;;
