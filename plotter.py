@@ -13,12 +13,12 @@ class ModelPlotter(object):
 
     @classmethod
     def plot_metrics(cls, history):
-        print(history.keys())
+        # print(history.keys())
         # summarize history for MSE
         plt.plot(history['loss'])
         plt.plot(history['val_loss'])
-        plt.title('Model Loss Function')
-        plt.ylabel('Loss')
+        plt.title('Model Loss Function: Mean Squared Error')
+        plt.ylabel('Loss (Mean Squared Error)')
         plt.xlabel('Epoch')
         plt.legend(['training', 'validation'])
         # plt.show()

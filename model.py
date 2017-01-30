@@ -14,13 +14,22 @@ from keras.optimizers import Adam, SGD
 # from keras.regularizers import activity_l2,  l2
 from keras.utils.visualize_util import plot
 
+# Next Steps:
+# 1. Use fit_generator, and maybe ImageDataGenerator
+# 2. Horizontal Flipping
+# 3. Balancing Input Dataset using binning
+
 # Settings
 DEBUG = True
-DISPLAY_IMAGES = False
+DISPLAY_IMAGES = True
 BATCH_SIZE = 1
-NUM_EPOCHS = 50
+NUM_EPOCHS = 15
 TRAINING_PORTION = 1
-HZFLIP = False
+HZFLIP = True
+
+
+# OpenCV Flip Type for Horizontal Flipping
+CV_FLIPTYPE_HORIZONTAL = 1
 
 # Steering Miltiplier
 STEERING_MULTIPLIER = 100
@@ -149,6 +158,15 @@ class Model(object):
             x[idx, :, :, :] = np.copy(image_data)
             y[idx] = np.copy(steering)
 
+        if hzflip:
+            # import ipdb; ipdb.set_trace()
+            for idx in range(count):
+                # Fill the empty end of the array
+                hz_flipped_image = cv2.flip(x[idx, :, :, :],
+                                            CV_FLIPTYPE_HORIZONTAL)
+                x[count + idx, :, :, :] = hz_flipped_image.reshape(HEIGHT, WIDTH, DEPTH)
+                y[count + idx] = -1.0 * y[idx]
+
         return x, y
 
     def set_optimizer(self):
@@ -162,7 +180,7 @@ class Model(object):
         return history
 
     def train_generator(self, generator):
-        history = self.model.fit(generator, nb_epoch=NUM_EPOCHS, batch_size=BATCH_SIZE, shuffle=True,
+        history = self.model.fit_generator(generator, nb_epoch=NUM_EPOCHS, batch_size=BATCH_SIZE, shuffle=True,
                                  validation_split=0.5)
         return history
 
@@ -226,15 +244,8 @@ def main():
     if DEBUG: print ("Database size: {}".format(len(rows)))
 
     n_train = int(len(rows) * TRAINING_PORTION)
-    # x, y = model.rows_to_feature_labels(3, hzflip=HZFLIP)
     X_train, y_train = model.rows_to_feature_labels(n_train, hzflip=HZFLIP)
     X_train, y_train = shuffle(X_train, y_train, random_state=1)
-
-
-    if HZFLIP:
-        for i in range(n_train):
-            X_train[n_train + i, :, :, :] = cv2.flip(X_train[i, :, :, :], 1)
-            y_train[n_train + i] = -1.0 * y_train[i]
 
     display_images(X_train, "ROI Input")
 
