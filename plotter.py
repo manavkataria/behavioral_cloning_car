@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import pickle
 
 from model import Model
+from sklearn.utils import shuffle
 
 # matplotlib.use('TkAgg')  # MacOSX Compatibility
 matplotlib.interactive(True)
@@ -12,28 +13,17 @@ class ModelPlotter(object):
 
     @classmethod
     def plot_metrics(cls, history):
-        # print(history.keys())
+        print(history.keys())
         # summarize history for MSE
-        plt.plot(history['mean_squared_error'])
-        plt.plot(history['val_mean_squared_error'])
-        plt.title('Model Error')
-        plt.ylabel('Error')
-        plt.xlabel('epoch')
-        plt.legend(['training', 'validation'], loc='upper right')
+        plt.plot(history['loss'])
+        plt.plot(history['val_loss'])
+        plt.title('Model Loss Function')
+        plt.ylabel('Loss')
+        plt.xlabel('Epoch')
+        plt.legend(['training', 'validation'])
         # plt.show()
         plt.savefig('save/ModelError')
         plt.close()
-
-        # summarize history for loss
-        # plt.plot(history['loss'])
-        # plt.plot(history['val_loss'])
-        # plt.title('Model Loss')
-        # plt.ylabel('loss')
-        # plt.xlabel('epoch')
-        # plt.legend(['training', 'validation'], loc='upper right')
-        # # plt.show()
-        # plt.savefig('save/history')
-        # plt.close()
 
     @classmethod
     def plot_predictions(cls, model, x, y):
@@ -52,7 +42,7 @@ class ModelPlotter(object):
         plt.xlabel('frame')
         # plt.ylim([-15, 15])
         plt.ylabel('steering angle')
-        plt.legend(['original', 'predicted'], loc='upper right')
+        plt.legend(['original', 'predicted'])
         # plt.show()
         plt.savefig('save/predictions')
 
@@ -67,6 +57,7 @@ def main():
     model = model.model
 
     history, X_train, y_train = pickle.load(open('save/hist_xy.p', 'rb'))
+    X_train, y_train = shuffle(X_train, y_train)
 
     # Print Predictions:
     predictions = model.model.predict_on_batch(X_train)
@@ -76,7 +67,6 @@ def main():
                diff=int(predictions[i][0] - y_train[i]),
                pred=int(predictions[i][0]),
                y_train=int(y_train[i])))
-    # print("Predictions:", list(map(lambda x: (int(x[0]), int(x[1]), int(x[2])), zip(predictions, y_train, predictions-y_train))))
 
     # Plot
     ModelPlotter.plot_metrics(history)

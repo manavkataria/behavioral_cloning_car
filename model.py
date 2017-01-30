@@ -16,9 +16,9 @@ from keras.utils.visualize_util import plot
 
 # Settings
 DEBUG = True
-DISPLAY_IMAGES = True
+DISPLAY_IMAGES = False
 BATCH_SIZE = 1
-NUM_EPOCHS = 2
+NUM_EPOCHS = 50
 TRAINING_PORTION = 1
 HZFLIP = False
 
@@ -154,7 +154,7 @@ class Model(object):
     def set_optimizer(self):
         optimizer = Adam()
         # optimizer = SGD(lr=0.0001)
-        self.model.compile(loss='mean_squared_error', optimizer=optimizer, metrics=['mean_squared_error'])
+        self.model.compile(loss='mean_squared_error', optimizer=optimizer)
 
     def train(self, x, y):
         history = self.model.fit(x, y, nb_epoch=NUM_EPOCHS, batch_size=BATCH_SIZE, shuffle=True,
@@ -244,7 +244,12 @@ def main():
     model.save_model_weights(model_filename)
 
     predictions = model.model.predict_on_batch(X_train)
-    print("Predictions:", list(zip(predictions, y_train, predictions-y_train)))
+    for i in range(len(predictions)):
+        print("Prediction[{i}]: ({diff}) = ({pred}) - ({y_train})".format(
+               i=i,
+               diff=int(predictions[i][0] - y_train[i]),
+               pred=int(predictions[i][0]),
+               y_train=int(y_train[i])))
 
     # Pickle Dump
     pickle.dump([history.history, X_train, y_train], open('save/hist_xy.p', 'wb'))
