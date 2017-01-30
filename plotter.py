@@ -7,7 +7,7 @@ from model import Model
 from sklearn.utils import shuffle
 
 # matplotlib.use('TkAgg')  # MacOSX Compatibility
-matplotlib.interactive(True)
+# matplotlib.interactive(True)
 
 class ModelPlotter(object):
 
