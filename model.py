@@ -14,11 +14,12 @@ from keras.optimizers import Adam, SGD
 # from keras.regularizers import activity_l2,  l2
 from keras.utils.visualize_util import plot
 from keras.preprocessing.image import ImageDataGenerator
-
+from keras.callbacks import History
 # Next Steps:
-# 1. Use fit_generator, and maybe ImageDataGenerator
+# 1. Use fit_generator (done), and maybe ImageDataGenerator (done)
 # 2. Horizontal Flipping (Done)
-# 3. Balancing Input Dataset using binning
+# 3. Data Augmentation (Done, via ImageDataGenerator)
+# 4. Balancing Input Dataset using binning (TODO)
 
 # Settings
 DEBUG = True
@@ -28,6 +29,7 @@ NUM_EPOCHS = 50
 TRAINING_PORTION = 1
 TRAINING_ENABLE = True
 FIT_GENERATOR_ENABLE = True
+MANUAL_FIT_ENABLED = True
 
 # OpenCV Flip Type for Horizontal Flipping
 CV_FLIPTYPE_HORIZONTAL = 1
@@ -211,51 +213,58 @@ class Model(object):
         # Fit
         if DEBUG: print("Running Fit Generator (Manual={})".format(manual))
         if not manual:
-            history = self.model.fit_generator(
-                                    train_generator,
-                                    samples_per_epoch_train,
-                                    nb_epochs,
-                                    validation_data=val_generator,
-                                    nb_val_samples=samples_per_epoch_val)
+            history = self.model.fit_generator(train_generator,
+                                               samples_per_epoch_train,
+                                               nb_epochs,
+                                               validation_data=val_generator,
+                                               nb_val_samples=samples_per_epoch_val)
         else:
-            history = self.fit_train_and_validate_with_generator_manual(train_generator, samples_per_epoch_train, nb_epochs, validation_data=val_generator, nb_val_samples=samples_per_epoch_val)
+            history = self.fit_train_and_validate_with_generator_manual(train_generator, samples_per_epoch_train, nb_epochs, val_datagen=val_generator, nb_val_samples=samples_per_epoch_val)
 
         return history
 
     def fit_train_and_validate_with_generator_manual(self,
-                                                     X_train,
-                                                     y_train,
                                                      train_datagen,
-                                                     samples_per_epoch_train,
+                                                     nb_train_samples,
                                                      nb_epochs,
-                                                     validation_data,
+                                                     val_datagen,
                                                      nb_val_samples,
                                                      verbose=1):
         # Manual Mode
+        loss, val_loss = [], []
+
         for e in range(nb_epochs):
-            if verbose == 1:
-                print('Epoch', e)
+            # Per Batch
             batches = 0
 
             # Training
-            for X_batch, y_batch in train_datagen.flow(X_train,
-                                                       y_train,
-                                                       batch_size=int(batch_size * training_split)):
-                loss = self.model.train(X_batch, y_batch)
+            batch_loss, batch_val_loss = [], []
+            for X_batch, y_batch in train_datagen:
+                batch_loss.append(self.model.train_on_batch(X_batch, y_batch))
                 batches += 1
-                if batches >= len(X_train) / batch_size:
+                if batches >= nb_train_samples:
                     break
 
             # Validation
-            for X_batch, y_batch in val_datagen.flow(X_train,
-                                                     y_train,
-                                                     batch_size=int(batch_size * validation_split)):
-                val_loss = self.model.evaluate(X_batch, y_batch)
+            batches = 0
+            for X_batch, y_batch in val_datagen:
+                batch_val_loss.append(self.model.test_on_batch(X_batch, y_batch))
                 batches += 1
-                if batches >= len(X_train) / batch_size:
+                if batches >= nb_val_samples:
                     break
 
-        history = {'loss': loss, 'val_loss': val_loss}
+            loss.append(sum(batch_loss) / float(len(batch_loss)))
+            val_loss.append(sum(batch_val_loss) / float(len(batch_val_loss)))
+
+            if verbose == 1:
+                print('Manual Fit. Epoch {:02d}/{:02d}: loss: {:5.2f} - val_loss {:5.2f}'.format(
+                      e,
+                      nb_epochs,
+                      loss[e],
+                      val_loss[e]))
+
+        history = History()
+        history.history = {'loss': loss, 'val_loss': val_loss}
 
         return history
 
@@ -326,7 +335,7 @@ def main():
 
         model.set_optimizer()
         if FIT_GENERATOR_ENABLE:
-            history = model.train_and_validate_with_generator(X_train, y_train, manual=False)
+            history = model.train_and_validate_with_generator(X_train, y_train, manual=MANUAL_FIT_ENABLED)
         else:
             history = model.train(X_train, y_train)
 
