@@ -176,8 +176,8 @@ class Model(object):
                              height_shift_range=VERTICAL_SHIFT_RANGE_PCT)
         train_datagen = ImageDataGenerator(**data_gen_args)
         val_datagen = ImageDataGenerator(**data_gen_args)
-        train_generator = train_datagen.flow(X_train, y_train, batch_size=BATCH_SIZE)
-        val_generator = val_datagen.flow(X_train, y_train, batch_size=BATCH_SIZE)
+        train_generator = train_datagen.flow(X_train, y_train, batch_size=batch_size)
+        val_generator = val_datagen.flow(X_train, y_train, batch_size=batch_size)
 
         # Fit
         if DEBUG: print("Running Fit Generator (Manual={})".format(manual))
@@ -245,28 +245,29 @@ class Model(object):
         # Manual Mode
         loss, val_loss = [], []
         for e in range(nb_epochs):
+            batch_loss, batch_val_loss = [], []
+            train_batch_counter, val_batch_counter = 0, 0
+            nb_training_batches = nb_train_samples / BATCH_SIZE
+            nb_val_batches = nb_train_samples / BATCH_SIZE
 
             import ipdb; ipdb.set_trace()
 
             # Training
-            batches = 0
-            batch_loss, batch_val_loss = [], []
-            with tqdm(total=nb_train_samples * BATCH_SIZE, desc='Training Samples') as pbar:
+            with tqdm(total=nb_train_samples, desc='Training Samples') as pbar:
                 for X_batch, y_batch in train_datagen:
                     if ZERO_PENALIZING:
                         X_batch, y_batch = self.zero_penalize(e, train_datagen)
                     batch_loss.append(self.model.train_on_batch(X_batch, y_batch))
-                    batches += 1
                     pbar.update(BATCH_SIZE)
-                    if batches >= nb_train_samples:
+                    train_batch_counter += 1
+                    if train_batch_counter >= nb_training_batches:
                         break
 
             # Validation
-            batches = 0
             for X_batch, y_batch in val_datagen:
                 batch_val_loss.append(self.model.test_on_batch(X_batch, y_batch))
                 batches += 1
-                if batches >= nb_val_samples:
+                if val_batch_counter >= nb_val_batches:
                     break
 
             loss.append(sum(batch_loss) / float(len(batch_loss)))
