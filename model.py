@@ -30,7 +30,7 @@ from settings import (HEIGHT, WIDTH, DEPTH,
 
 # Settings
 DEBUG = False
-BATCH_SIZE = 256
+BATCH_SIZE = 32
 NUM_EPOCHS = 5
 TRAINING_PORTION = 1
 TRAINING_ENABLE = True
@@ -41,15 +41,15 @@ FIT_GENERATOR_ENABLE = True
 MANUAL_FIT_ENABLED = True
 # Dataset Balancing
 ZERO_PENALIZING = False
-DESIRED_DATASET_SIZE = 1024 * 8
+DESIRED_DATASET_SIZE = 1024
 
 # Training Data
 # DATA_DIR = "training/track1/sand-corner1/"               # Sand-Corner1
-# TRAIN_VALIDATION_SPLIT = 0.5
+# VALIDATION_SPLIT = 0.5
 DATA_DIR = "training/data/"               # Udacity Data
-TRAIN_VALIDATION_SPLIT = 0.2
+VALIDATION_SPLIT = 0.2
 # DATA_DIR = "training/minimal/"            # Left, Center, Right
-# TRAIN_VALIDATION_SPLIT = 0.5
+# VALIDATION_SPLIT = 0.5
 DRIVING_LOG = DATA_DIR + "driving_log.csv"
 
 # OpenCV Flip Type for Horizontal Flipping
@@ -156,13 +156,13 @@ class Model(object):
 
     def train(self, x, y):
         history = self.model.fit(x, y, nb_epoch=NUM_EPOCHS, batch_size=BATCH_SIZE, shuffle=True,
-                                 validation_split=TRAIN_VALIDATION_SPLIT)
+                                 validation_split=VALIDATION_SPLIT)
         return history
 
     def train_and_validate_with_generator(self,
                                           X_train,
                                           y_train,
-                                          validation_split=0.5,
+                                          validation_split=VALIDATION_SPLIT,
                                           nb_epochs=NUM_EPOCHS,
                                           batch_size=BATCH_SIZE,
                                           manual=True):
@@ -188,7 +188,11 @@ class Model(object):
                                                validation_data=val_generator,
                                                nb_val_samples=samples_per_epoch_val)
         else:
-            history = self.fit_generator_manual(train_generator, samples_per_epoch_train, nb_epochs, val_datagen=val_generator, nb_val_samples=samples_per_epoch_val)
+            history = self.fit_generator_manual(train_generator,
+                                                samples_per_epoch_train,
+                                                nb_epochs,
+                                                val_datagen=val_generator,
+                                                nb_val_samples=samples_per_epoch_val)
 
         return history
 
@@ -242,16 +246,18 @@ class Model(object):
         loss, val_loss = [], []
         for e in range(nb_epochs):
 
+            import ipdb; ipdb.set_trace()
+
             # Training
             batches = 0
             batch_loss, batch_val_loss = [], []
-            with tqdm(total=nb_train_samples, desc='Training Batch') as pbar:
+            with tqdm(total=nb_train_samples * BATCH_SIZE, desc='Training Samples') as pbar:
                 for X_batch, y_batch in train_datagen:
                     if ZERO_PENALIZING:
                         X_batch, y_batch = self.zero_penalize(e, train_datagen)
                     batch_loss.append(self.model.train_on_batch(X_batch, y_batch))
                     batches += 1
-                    pbar.update(1)
+                    pbar.update(BATCH_SIZE)
                     if batches >= nb_train_samples:
                         break
 
@@ -367,17 +373,20 @@ def main():
 
         model.set_optimizer()
         if FIT_GENERATOR_ENABLE:
-            history = model.train_and_validate_with_generator(X_balanced, y_balanced, manual=MANUAL_FIT_ENABLED)
+            history = model.train_and_validate_with_generator(X_balanced,
+                                                              y_balanced,
+                                                              manual=MANUAL_FIT_ENABLED)
         else:
             history = model.train(X_balanced, y_balanced)
 
-        # model.save_model_to_json_file(model_filename)
         model.save_model(model_filename)
 
     if PREDICTION_ENABLE:
         for i, image in enumerate(X_train):
-            prediction = model.model.predict(image[None, :, :, :], batch_size=1)
-            print("{};  {:>6.2f}".format(model.lines[i].split(',')[0], prediction[0][0] / STEERING_MULTIPLIER))
+            prediction = model.model.predict(image[None, :, :, :],
+                                             batch_size=1)
+            print("{};  {:>6.2f}".format(model.lines[i].split(',')[0],
+                                         prediction[0][0] / STEERING_MULTIPLIER))
             display_images(image, str(prediction))
         # return
 
