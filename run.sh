@@ -1,6 +1,7 @@
 #!/bin/bash -x
 
 # rm -f save/*
+rm -f save/*.png
 case "$OSTYPE" in
   darwin*)  PLATFORM="OSX" ;;
   linux*)   PLATFORM="linux" ;;

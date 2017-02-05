@@ -5,18 +5,22 @@ import numpy as np
 import pickle
 import random
 
+from tqdm import tqdm
 from sklearn.utils import shuffle
 from keras.layers import Dense  # Activation
 from keras.layers.convolutional import Convolution2D
 from keras.layers.core import Dropout, Flatten
-from keras.models import load_model, model_from_json, Sequential
+from keras.models import load_model, Sequential
 from keras.optimizers import Adam, SGD
 # from keras.regularizers import activity_l2,  l2
 from keras.utils.visualize_util import plot
 from keras.preprocessing.image import ImageDataGenerator
 from keras.callbacks import History
 
-import utils
+
+from utils import (display_images, print_predictions, preprocess_image)
+from settings import (HEIGHT, WIDTH, DEPTH,
+                      STEERING_MULTIPLIER,)
 
 # Next Steps:
 # 1. Use fit_generator (done), and maybe ImageDataGenerator (done)
@@ -26,20 +30,22 @@ import utils
 
 # Settings
 DEBUG = False
-DISPLAY_IMAGES = False
-BATCH_SIZE = 1
-NUM_EPOCHS = 30
+BATCH_SIZE = 256
+NUM_EPOCHS = 5
 TRAINING_PORTION = 1
 TRAINING_ENABLE = True
+PREDICTION_ENABLE = False
 
 # Features
 FIT_GENERATOR_ENABLE = True
 MANUAL_FIT_ENABLED = True
 # Dataset Balancing
 ZERO_PENALIZING = False
-DESIRED_DATASET_SIZE = 1024
+DESIRED_DATASET_SIZE = 1024 * 8
 
 # Training Data
+# DATA_DIR = "training/track1/sand-corner1/"               # Sand-Corner1
+# TRAIN_VALIDATION_SPLIT = 0.5
 DATA_DIR = "training/data/"               # Udacity Data
 TRAIN_VALIDATION_SPLIT = 0.2
 # DATA_DIR = "training/minimal/"            # Left, Center, Right
@@ -49,59 +55,15 @@ DRIVING_LOG = DATA_DIR + "driving_log.csv"
 # OpenCV Flip Type for Horizontal Flipping
 CV_FLIPTYPE_HORIZONTAL = 1
 
-# Steering Miltiplier
-STEERING_MULTIPLIER = 100
-
-# Image Dimensions
-WIDTH = 200
-HEIGHT = 66
-DEPTH = 1
-
-# Image ROI Crop Percentage from [left, top, right, bottom]
-ROI_bbox = [0.0, 0.40, 0.0, 0.13]
-
 # Model Regularization
-# DROPOUT = 0.1
+DROPOUT = 0.1
 
 # Data Augmentation
-HZ_FLIP_ENABLE = False
+HZ_FLIP_ENABLE = True
 HORIZONTAL_SHIFT_RANGE_PCT = 0.1
-VERTICAL_SHIFT_RANGE_PCT = 0.1
+VERTICAL_SHIFT_RANGE_PCT = 0.00
 SAVE_TO_DIR = DATA_DIR
 SAVE_PREFIX = 'augmented_'
-
-
-def cut_ROI_bbox(image_data):
-    w = image_data.shape[1]
-    h = image_data.shape[0]
-    x1 = int(w * ROI_bbox[0])
-    x2 = int(w * (1 - ROI_bbox[2]))
-    y1 = int(h * ROI_bbox[1])
-    y2 = int(h * (1 - ROI_bbox[3]))
-    ROI_data = image_data[y1:y2, x1:x2]
-    return ROI_data
-
-
-def rgb_to_grayscale(img):
-    return cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-
-
-def normalize_grayscale(imgray):
-    a = -0.5
-    b = 0.5
-    grayscale_min = 0
-    grayscale_max = 255
-    return a + (((imgray - grayscale_min) * (b - a)) / (grayscale_max - grayscale_min))
-
-
-def preprocess_image(image):
-    """ Resize and Crop Image """
-    gray = rgb_to_grayscale(image)
-    cropped = cut_ROI_bbox(gray)
-    resized = cv2.resize(cropped, (WIDTH, HEIGHT))
-    normalized = normalize_grayscale(resized)
-    reshaped = normalized.reshape(HEIGHT, WIDTH, DEPTH)
-    return reshaped
 
 
 class Model(object):
@@ -124,28 +86,23 @@ class Model(object):
         """
 
         self.model = Sequential()
-        self.model.add(Convolution2D(24, 5, 5, name='Conv1', init='glorot_normal', subsample=(2, 2), input_shape=(HEIGHT, WIDTH, DEPTH), activation='relu'))
-        self.model.add(Convolution2D(36, 5, 5, name='Conv2', init='glorot_normal', subsample=(2, 2), activation='relu'))
-        self.model.add(Convolution2D(48, 5, 5, name='Conv3', init='glorot_normal', subsample=(2, 2), activation='relu'))
-        self.model.add(Convolution2D(64, 3, 3, name='Conv4', init='glorot_normal', subsample=(1, 1), activation='relu'))
-        self.model.add(Convolution2D(64, 3, 3, name='Conv5', init='glorot_normal', subsample=(1, 1), activation='relu'))
+        self.model.add(Convolution2D(24, 5, 5, name='Conv1', subsample=(2, 2), input_shape=(HEIGHT, WIDTH, DEPTH), activation='relu'))
+        self.model.add(Convolution2D(36, 5, 5, name='Conv2', subsample=(2, 2), activation='relu'))
+        self.model.add(Convolution2D(48, 5, 5, name='Conv3', subsample=(2, 2), activation='relu'))
+        self.model.add(Convolution2D(64, 3, 3, name='Conv4', subsample=(1, 1), activation='relu'))
+        self.model.add(Convolution2D(64, 3, 3, name='Conv5', subsample=(1, 1), activation='relu'))
 
         self.model.add(Flatten(name='Flatten'))
         self.model.add(Dense(1164, name='Dense1'))
-        # self.model.add(Dropout(DROPOUT))
+        self.model.add(Dropout(DROPOUT))
         self.model.add(Dense(100, name='Dense2', activation='relu'))
-        # self.model.add(Dropout(DROPOUT))
+        self.model.add(Dropout(DROPOUT))
         self.model.add(Dense(50, name='Dense3', activation='relu'))
-        # self.model.add(Dropout(DROPOUT))
+        self.model.add(Dropout(DROPOUT))
         self.model.add(Dense(10, name='Dense4', activation='relu'))
         self.model.add(Dense(1, name='Dense5'))
 
         return self.model
-
-    # def create_random_data(batches):
-    #     x = np.random.random((BATCH_SIZE * batches, HEIGHT, WIDTH, DEPTH))
-    #     y = np.random.randint(2, size=(BATCH_SIZE * batches, 1))
-    #     return x, y
 
     def read_csv(self, filename):
         self.lines = []
@@ -231,7 +188,7 @@ class Model(object):
                                                validation_data=val_generator,
                                                nb_val_samples=samples_per_epoch_val)
         else:
-            history = self.fit_train_and_validate_with_generator_manual(train_generator, samples_per_epoch_train, nb_epochs, val_datagen=val_generator, nb_val_samples=samples_per_epoch_val)
+            history = self.fit_generator_manual(train_generator, samples_per_epoch_train, nb_epochs, val_datagen=val_generator, nb_val_samples=samples_per_epoch_val)
 
         return history
 
@@ -274,13 +231,13 @@ class Model(object):
 
         return X_batch, y_batch
 
-    def fit_train_and_validate_with_generator_manual(self,
-                                                     train_datagen,
-                                                     nb_train_samples,
-                                                     nb_epochs,
-                                                     val_datagen,
-                                                     nb_val_samples,
-                                                     verbose=1):
+    def fit_generator_manual(self,
+                             train_datagen,
+                             nb_train_samples,
+                             nb_epochs,
+                             val_datagen,
+                             nb_val_samples,
+                             verbose=1):
         # Manual Mode
         loss, val_loss = [], []
         for e in range(nb_epochs):
@@ -288,13 +245,15 @@ class Model(object):
             # Training
             batches = 0
             batch_loss, batch_val_loss = [], []
-            for X_batch, y_batch in train_datagen:
-                if ZERO_PENALIZING:
-                    X_batch, y_batch = self.zero_penalize(e, train_datagen)
-                batch_loss.append(self.model.train_on_batch(X_batch, y_batch))
-                batches += 1
-                if batches >= nb_train_samples:
-                    break
+            with tqdm(total=nb_train_samples, desc='Training Batch') as pbar:
+                for X_batch, y_batch in train_datagen:
+                    if ZERO_PENALIZING:
+                        X_batch, y_batch = self.zero_penalize(e, train_datagen)
+                    batch_loss.append(self.model.train_on_batch(X_batch, y_batch))
+                    batches += 1
+                    pbar.update(1)
+                    if batches >= nb_train_samples:
+                        break
 
             # Validation
             batches = 0
@@ -322,11 +281,6 @@ class Model(object):
 
         return history
 
-    # def save_model_to_json_file(self, filename):
-    #     json_string = self.model.to_json()
-    #     with open(filename + '.json', 'w') as jfile:
-    #         jfile.write(json_string)
-
     def save_model(self, filename):
         self.model.save(filename)
 
@@ -341,27 +295,6 @@ class Model(object):
         model_image = cv2.imread(filename + ".jpg")
         cv2.imshow("model", model_image)
         cv2.waitKey(0)
-
-
-def display_images(image_features, message=None, delay=500):
-    if not DISPLAY_IMAGES: return
-    font = cv2.FONT_HERSHEY_SIMPLEX
-    WHITE = (255, 255, 255)
-    FONT_THICKNESS = 1
-    # FONT_SCALE = 4
-
-    if image_features.ndim == 3:
-        image_features = [image_features]
-
-    height, width, depth = image_features[0].shape
-
-    for image in image_features:
-        image = np.copy(image)  # Avoid Overwriting Original Image
-        if message:
-            text_position = (int(width * 0.05), int(height * 0.95))
-            cv2.putText(image, message, text_position, font, FONT_THICKNESS, WHITE)
-        cv2.imshow(message, image)
-        cv2.waitKey(delay)
 
 
 def bin_dataset(y_train):
@@ -427,9 +360,9 @@ def main():
 
     X_train, y_train = model.rows_to_feature_labels(n_train, hzflip=HZ_FLIP_ENABLE)
     X_train, y_train = shuffle(X_train, y_train, random_state=1)
-    X_balanced, y_balanced = balance_dataset(X_train, y_train)
 
     if TRAINING_ENABLE:
+        X_balanced, y_balanced = balance_dataset(X_train, y_train)
         display_images(X_balanced, "ROI")
 
         model.set_optimizer()
@@ -441,10 +374,17 @@ def main():
         # model.save_model_to_json_file(model_filename)
         model.save_model(model_filename)
 
+    if PREDICTION_ENABLE:
+        for i, image in enumerate(X_train):
+            prediction = model.model.predict(image[None, :, :, :], batch_size=1)
+            print("{};  {:>6.2f}".format(model.lines[i].split(',')[0], prediction[0][0] / STEERING_MULTIPLIER))
+            display_images(image, str(prediction))
+        # return
+
     # Pickle Dump
     pickle.dump([history.history, X_balanced, y_balanced, y_train], open('save/hist_xy.p', 'wb'))
     if DEBUG:
-        utils.print_predictions(model.model, X_balanced, y_balanced)
+        print_predictions(model.model, X_balanced, y_balanced)
 
     import gc; gc.collect()  # Suppress a Keras Tensorflow Bug
 

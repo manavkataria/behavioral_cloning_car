@@ -14,11 +14,14 @@ from io import BytesIO
 
 from keras.models import load_model
 
+from utils import preprocess_for_autonomy
+from settings import STEERING_MULTIPLIER
+
+
 sio = socketio.Server()
 app = Flask(__name__)
 model = None
 prev_image_array = None
-
 
 @sio.on('telemetry')
 def telemetry(sid, data):
@@ -33,12 +36,16 @@ def telemetry(sid, data):
         imgString = data["image"]
         image = Image.open(BytesIO(base64.b64decode(imgString)))
         image_array = np.asarray(image)
-        ### Preprocess Image ###
-        image_array = preprocess_image(image_array)
+
+        ### Modified ###
+        image_array = preprocess_for_autonomy(image_array)
+        prediction = model.predict(image_array[None, :, :, :], batch_size=1)
+        prediction = float(prediction) / STEERING_MULTIPLIER
         ###
-        steering_angle = float(model.predict(image_array[None, :, :, :], batch_size=1))
-        throttle = 0.2
-        print(steering_angle, throttle)
+
+        steering_angle = prediction
+        throttle = 0.1
+        print("{:>+6.2f} {}".format(steering_angle, throttle))
         send_control(steering_angle, throttle)
 
         # save frame
