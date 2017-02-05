@@ -15,6 +15,9 @@ from keras.optimizers import Adam, SGD
 from keras.utils.visualize_util import plot
 from keras.preprocessing.image import ImageDataGenerator
 from keras.callbacks import History
+
+import utils
+
 # Next Steps:
 # 1. Use fit_generator (done), and maybe ImageDataGenerator (done)
 # 2. Horizontal Flipping (Done)
@@ -22,14 +25,26 @@ from keras.callbacks import History
 # 4. Balancing Input Dataset using binning (TODO)
 
 # Settings
-DEBUG = True
+DEBUG = False
 DISPLAY_IMAGES = False
 BATCH_SIZE = 1
-NUM_EPOCHS = 50
+NUM_EPOCHS = 30
 TRAINING_PORTION = 1
 TRAINING_ENABLE = True
+
+# Features
 FIT_GENERATOR_ENABLE = True
 MANUAL_FIT_ENABLED = True
+# Dataset Balancing
+ZERO_PENALIZING = False
+DESIRED_DATASET_SIZE = 1024
+
+# Training Data
+DATA_DIR = "training/data/"               # Udacity Data
+TRAIN_VALIDATION_SPLIT = 0.2
+# DATA_DIR = "training/minimal/"            # Left, Center, Right
+# TRAIN_VALIDATION_SPLIT = 0.5
+DRIVING_LOG = DATA_DIR + "driving_log.csv"
 
 # OpenCV Flip Type for Horizontal Flipping
 CV_FLIPTYPE_HORIZONTAL = 1
@@ -48,14 +63,8 @@ ROI_bbox = [0.0, 0.40, 0.0, 0.13]
 # Model Regularization
 # DROPOUT = 0.1
 
-# Training Data
-# DATA_DIR = "training/data/"               # Udacity Data
-DATA_DIR = "training/minimal/"              # Left, Center, Right
-DRIVING_LOG = DATA_DIR + "driving_log.csv"
-
-
 # Data Augmentation
-HZ_FLIP_ENABLE = True
+HZ_FLIP_ENABLE = False
 HORIZONTAL_SHIFT_RANGE_PCT = 0.1
 VERTICAL_SHIFT_RANGE_PCT = 0.1
 SAVE_TO_DIR = DATA_DIR
@@ -82,7 +91,7 @@ def normalize_grayscale(imgray):
     b = 0.5
     grayscale_min = 0
     grayscale_max = 255
-    return a + ( ( (imgray - grayscale_min)*(b - a) )/( grayscale_max - grayscale_min ) )
+    return a + (((imgray - grayscale_min) * (b - a)) / (grayscale_max - grayscale_min))
 
 
 def preprocess_image(image):
@@ -99,15 +108,15 @@ class Model(object):
 
     def __init__(self, filename):
         # Model Definition
+        filename = filename
         self.filename = filename
-        if os.path.isfile(filename + '.h5'):
-            if DEBUG: print ("Loading Model:", filename + '.h5')
-            self.model = self.load()
+        if os.path.isfile(filename):
+            self.model = self.load_model(self.filename)
         else:
             self.model = self._define_model()
 
-    def load(self):
-        return self.load_model_with_weights(self.filename)
+        # Zero-Penalized Filtered Labels
+        if ZERO_PENALIZING: self.filtered_y = []
 
     def _define_model(self):
         """
@@ -154,12 +163,16 @@ class Model(object):
         x = np.empty((size_multiple * count, HEIGHT, WIDTH, DEPTH), dtype=np.float32)
         y = np.empty((size_multiple * count), dtype=np.float32)
 
+        if DEBUG:
+            print("Index: Steering")
         for idx, line in enumerate(self.lines[:count]):
             [center, left, right, steering, throttle, breaks, speed] = line.split(',')
 
-            # Adding Random Perturbations between [-5, 5] to each input
-            steering = float(steering) * STEERING_MULTIPLIER + random.randint(-50, 50) / 10.0
-            if DEBUG: print(idx, steering)
+            # Adding Random Perturbations between [-STEERING_MULTIPLIER/20, STEERING_MULTIPLIER/20] to each input
+            steering = float(steering) * STEERING_MULTIPLIER + random.randint(-STEERING_MULTIPLIER / 20, STEERING_MULTIPLIER / 20)
+
+            if DEBUG:
+                print("{:^5d} -> {:>5}".format(idx, steering))
 
             image_data = cv2.imread(DATA_DIR + center)
             message = 'Angle: {:=+03d}'.format(int(steering))
@@ -170,7 +183,6 @@ class Model(object):
             y[idx] = np.copy(steering)
 
         if hzflip:
-            # import ipdb; ipdb.set_trace()
             for idx in range(count):
                 # Fill the empty end of the array
                 hz_flipped_image = cv2.flip(x[idx, :, :, :],
@@ -187,7 +199,7 @@ class Model(object):
 
     def train(self, x, y):
         history = self.model.fit(x, y, nb_epoch=NUM_EPOCHS, batch_size=BATCH_SIZE, shuffle=True,
-                                 validation_split=0.5)
+                                 validation_split=TRAIN_VALIDATION_SPLIT)
         return history
 
     def train_and_validate_with_generator(self,
@@ -223,6 +235,45 @@ class Model(object):
 
         return history
 
+    def zero_penalize(self, current_epoch, datagen):
+        """
+        Zero-Penalizing: Killing Zeros as input labels
+            Inspired by Mohan Karthik's Blog Post "Cloning a car to mimic human driving":
+            https://medium.com/@mohankarthik/cloning-a-car-to-mimic-human-driving-5c2f7e8d8aff#.y5qsm32s4
+        """
+
+        if len(self.filtered_y) <= current_epoch:
+            self.filtered_y.append([])
+
+        # We start with a bias of 1.0 (allow all angles) and slowly as the epochs
+        # continue, reduce the bias, thereby dropping low angles progressively
+        bias = 1. / (current_epoch + 1.)
+
+        # Define a random threshold for each image taken
+        threshold = np.random.uniform()
+
+        for X_batch, y_batch in datagen:
+            # If the newly augmented angle + the bias falls below the threshold
+            # then discard this angle / img combination and look again
+            # FIXME(manav): This assumes BATCH_SIZE = 1
+            normalized_y_value = y_batch[0] / STEERING_MULTIPLIER
+            if DEBUG:
+                print("normalized_y_value: {:>5.1f} <- {:>5.1f}".format(
+                      normalized_y_value, y_batch[0], bias, threshold))
+            if (abs(normalized_y_value) + bias) < threshold:
+                if DEBUG:
+                    print("Zero Penalizing: {:>5.1f} + {:>5.1f} <  {:>5.1f}".format(
+                          y_batch[0], bias, threshold))
+                continue
+            else:
+                if DEBUG:
+                    print("Not  Penalizing: {:>5.1f} + {:>5.1f} >= {:>5.1f}".format(
+                          y_batch[0], bias, threshold))
+                self.filtered_y[current_epoch].append(y_batch[0])
+                break
+
+        return X_batch, y_batch
+
     def fit_train_and_validate_with_generator_manual(self,
                                                      train_datagen,
                                                      nb_train_samples,
@@ -232,14 +283,14 @@ class Model(object):
                                                      verbose=1):
         # Manual Mode
         loss, val_loss = [], []
-
         for e in range(nb_epochs):
-            # Per Batch
-            batches = 0
 
             # Training
+            batches = 0
             batch_loss, batch_val_loss = [], []
             for X_batch, y_batch in train_datagen:
+                if ZERO_PENALIZING:
+                    X_batch, y_batch = self.zero_penalize(e, train_datagen)
                 batch_loss.append(self.model.train_on_batch(X_batch, y_batch))
                 batches += 1
                 if batches >= nb_train_samples:
@@ -257,7 +308,7 @@ class Model(object):
             val_loss.append(sum(batch_val_loss) / float(len(batch_val_loss)))
 
             if verbose == 1:
-                print('Manual Fit. Epoch {:02d}/{:02d}: loss: {:5.2f} - val_loss {:5.2f}'.format(
+                print('Manual Fit. Epoch {:02d}/{:02d}: loss: {:>8.1f} - val_loss {:>8.1f}'.format(
                       e,
                       nb_epochs,
                       loss[e],
@@ -266,25 +317,22 @@ class Model(object):
         history = History()
         history.history = {'loss': loss, 'val_loss': val_loss}
 
+        if ZERO_PENALIZING:
+            history.history['filtered_y'] = self.filtered_y
+
         return history
 
-    def save_model_to_json_file(self, filename):
-        json_string = self.model.to_json()
-        with open(filename + '.json', 'w') as jfile:
-            jfile.write(json_string)
+    # def save_model_to_json_file(self, filename):
+    #     json_string = self.model.to_json()
+    #     with open(filename + '.json', 'w') as jfile:
+    #         jfile.write(json_string)
 
-    def save_model_weights(self, filename):
-        self.model.save(filename + '.h5')
+    def save_model(self, filename):
+        self.model.save(filename)
 
-    def load_model_from_json(self, filename):
-        with open(filename + '.json', 'r') as jfile:
-            json_string = jfile.read()
-
-        self.model = model_from_json(json_string)
-        return self.model
-
-    def load_model_with_weights(self, filename):
-        return load_model(filename + '.h5')
+    def load_model(self, filename):
+        print("Loading Model:", self.filename)
+        return load_model(filename)
 
     def plot_model_to_file(self, filename):
         plot(self.model, show_shapes=True, to_file=filename + '.jpg')
@@ -316,42 +364,88 @@ def display_images(image_features, message=None, delay=500):
         cv2.waitKey(delay)
 
 
+def bin_dataset(y_train):
+    counts, bin_edges = np.histogram(y_train, bins='auto')
+    bin_ids = np.digitize(y_train, bin_edges)
+    nbins = len(bin_edges)
+
+    # Initialize Bins
+    bins = [[] for _ in range(nbins)]
+    # Build Reverse Index
+    for i, y in enumerate(y_train):
+        rev_idx = bin_ids[i] - 1
+        bins[rev_idx].append(i)
+
+    return bins, counts, bin_edges
+
+
+def construct_balanced_dataset_from_bins(X_train, y_train, bins, size=100):
+    X_balanced = np.empty((size, HEIGHT, WIDTH, DEPTH), dtype=np.float32)
+    y_balanced = np.empty((size,), dtype=np.float32)
+
+    for i, idx in enumerate(random_uniform_sampling_from_bins(bins)):
+        X_balanced[i, :, :, :] = X_train[idx]
+        y_balanced[i] = y_train[idx]
+        if i >= (size - 1):
+            break
+
+    return X_balanced, y_balanced
+
+
+def random_uniform_sampling_from_bins(bins):
+    while 1:
+        bin_id = np.random.randint(len(bins))
+        selected_bin_indices = bins[bin_id]
+        bin_length = len(selected_bin_indices)
+        if bin_length <= 0:
+            # Pick another bin; this one being empty
+            continue
+        rev_idx = np.random.randint(bin_length)
+        yield selected_bin_indices[rev_idx]
+
+
+def balance_dataset(X_train, y_train, size=DESIRED_DATASET_SIZE):
+    bins, _, bin_edges = bin_dataset(y_train)
+    X_balanced, y_balanced = construct_balanced_dataset_from_bins(X_train, y_train, bins, size=size)
+
+    for image, angle in zip(X_balanced, y_balanced):
+        display_images(image, message=str(angle), delay=500)
+    return X_balanced, y_balanced
+
+
 def main():
-    model_filename = "save/model.json"
-    model_filename = model_filename[:-5]
+    model_filename = "save/model.h5"
     model = Model(model_filename)
 
     # model.plot_model_to_file(model_filename)
     # model.show_model_from_image(model_filename)
     rows = model.read_csv(DRIVING_LOG)
     n_train = int(len(rows) * TRAINING_PORTION)
-    if DEBUG: print ("Using Training Dataset Size: {}".format(n_train))
+
+    if DEBUG:
+        print("Using Training Dataset Size: {}".format(n_train))
 
     X_train, y_train = model.rows_to_feature_labels(n_train, hzflip=HZ_FLIP_ENABLE)
     X_train, y_train = shuffle(X_train, y_train, random_state=1)
+    X_balanced, y_balanced = balance_dataset(X_train, y_train)
 
     if TRAINING_ENABLE:
-        display_images(X_train, "ROI")
+        display_images(X_balanced, "ROI")
 
         model.set_optimizer()
         if FIT_GENERATOR_ENABLE:
-            history = model.train_and_validate_with_generator(X_train, y_train, manual=MANUAL_FIT_ENABLED)
+            history = model.train_and_validate_with_generator(X_balanced, y_balanced, manual=MANUAL_FIT_ENABLED)
         else:
-            history = model.train(X_train, y_train)
+            history = model.train(X_balanced, y_balanced)
 
-        model.save_model_to_json_file(model_filename)
-        model.save_model_weights(model_filename)
-
-    predictions = model.model.predict_on_batch(X_train)
-    for i in range(len(predictions)):
-        print("Prediction[{i}]: ({diff}) = ({pred}) - ({y_train})".format(
-               i=i,
-               diff=int(predictions[i][0] - y_train[i]),
-               pred=int(predictions[i][0]),
-               y_train=int(y_train[i])))
+        # model.save_model_to_json_file(model_filename)
+        model.save_model(model_filename)
 
     # Pickle Dump
-    pickle.dump([history.history, X_train, y_train], open('save/hist_xy.p', 'wb'))
+    pickle.dump([history.history, X_balanced, y_balanced, y_train], open('save/hist_xy.p', 'wb'))
+    if DEBUG:
+        utils.print_predictions(model.model, X_balanced, y_balanced)
+
     import gc; gc.collect()  # Suppress a Keras Tensorflow Bug
 
 
