@@ -41,7 +41,7 @@ FIT_GENERATOR_ENABLE = True
 MANUAL_FIT_ENABLED = True
 # Dataset Balancing
 ZERO_PENALIZING = False
-DESIRED_DATASET_SIZE = 1024
+DESIRED_DATASET_SIZE = 1024*2
 
 # Training Data
 # DATA_DIR = "training/track1/sand-corner1/"               # Sand-Corner1
@@ -250,8 +250,6 @@ class Model(object):
             nb_training_batches = nb_train_samples / BATCH_SIZE
             nb_val_batches = nb_train_samples / BATCH_SIZE
 
-            import ipdb; ipdb.set_trace()
-
             # Training
             with tqdm(total=nb_train_samples, desc='Training Samples') as pbar:
                 for X_batch, y_batch in train_datagen:
@@ -266,7 +264,7 @@ class Model(object):
             # Validation
             for X_batch, y_batch in val_datagen:
                 batch_val_loss.append(self.model.test_on_batch(X_batch, y_batch))
-                batches += 1
+                val_batch_counter += 1
                 if val_batch_counter >= nb_val_batches:
                     break
 
