@@ -30,7 +30,7 @@ from settings import (HEIGHT, WIDTH, DEPTH,
 
 # Settings
 DEBUG = False
-BATCH_SIZE = 32
+BATCH_SIZE = 1024
 NUM_EPOCHS = 5
 TRAINING_PORTION = 1
 TRAINING_ENABLE = True
@@ -41,13 +41,13 @@ FIT_GENERATOR_ENABLE = True
 MANUAL_FIT_ENABLED = True
 # Dataset Balancing
 ZERO_PENALIZING = False
-DESIRED_DATASET_SIZE = 1024*2
+DESIRED_DATASET_SIZE = 1024 * 32
 
 # Training Data
 # DATA_DIR = "training/track1/sand-corner1/"               # Sand-Corner1
 # VALIDATION_SPLIT = 0.5
 DATA_DIR = "training/data/"               # Udacity Data
-VALIDATION_SPLIT = 0.2
+VALIDATION_SPLIT = 0.25
 # DATA_DIR = "training/minimal/"            # Left, Center, Right
 # VALIDATION_SPLIT = 0.5
 DRIVING_LOG = DATA_DIR + "driving_log.csv"

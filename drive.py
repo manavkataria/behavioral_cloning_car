@@ -1,3 +1,4 @@
+#!/usr/bin/env ipython
 import argparse
 import base64
 from datetime import datetime
@@ -44,7 +45,7 @@ def telemetry(sid, data):
         ###
 
         steering_angle = prediction
-        throttle = 0.1
+        throttle = 0.10
         print("{:>+6.2f} {}".format(steering_angle, throttle))
         send_control(steering_angle, throttle)
 
