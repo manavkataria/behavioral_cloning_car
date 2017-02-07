@@ -7,12 +7,11 @@ import random
 
 from tqdm import tqdm
 from sklearn.utils import shuffle
-from keras.layers import Dense  # Activation
+from keras.layers import Dense
 from keras.layers.convolutional import Convolution2D
 from keras.layers.core import Dropout, Flatten
 from keras.models import load_model, Sequential
-from keras.optimizers import Adam, SGD
-# from keras.regularizers import activity_l2,  l2
+from keras.optimizers import Adam
 from keras.utils.visualize_util import plot
 from keras.preprocessing.image import ImageDataGenerator
 from keras.callbacks import History
@@ -23,10 +22,10 @@ from settings import (HEIGHT, WIDTH, DEPTH,
                       STEERING_MULTIPLIER,)
 
 # Next Steps:
-# 1. Use fit_generator (done), and maybe ImageDataGenerator (done)
+# 1. Use fit_generator (done); Manual fit_generator (done)
 # 2. Horizontal Flipping (Done)
 # 3. Data Augmentation (Done, via ImageDataGenerator)
-# 4. Balancing Input Dataset using binning (TODO)
+# 4. Balancing Input Dataset using binning (Done)
 
 # Settings
 DEBUG = False
