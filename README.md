@@ -16,6 +16,7 @@ Table of Contents
       * [Building an Overfitted Model with Minimal Data](#building-an-overfitted-model-with-minimal-data)
       * [Building a Regularized Model with Full Data](#building-a-regularized-model-with-full-data)
    * [Acknowledgements &amp; References](#acknowledgements--references)
+
 ---
 
 # Behavioral Cloning
@@ -54,7 +55,7 @@ My project includes the following files:
 * `install.sh` - install dependencies
 * `README.md` - description of the development process (this file)
 * Udacity Dataset [Download here](https://d17h27t6h515a5.cloudfront.net/topher/2016/December/584f6edd_data/data.zip) - Track1 Dataset Used for Training
-* Unity3D Simulator - [Download for MacOS](https://d17h27t6h515a5.cloudfront.net/topher/2017/February/5894ecbd_beta-simulator-mac/beta-simulator-mac.zip)
+* Unity3D Simulator - [Github Repo](https://github.com/udacity/self-driving-car-sim); [Download for MacOS](https://d17h27t6h515a5.cloudfront.net/topher/2017/February/5894ecbd_beta-simulator-mac/beta-simulator-mac.zip)
 
 Repository includes all required files and can be used to run the simulator in autonomous mode.
 
@@ -157,12 +158,11 @@ Once the dataset was balanced, the vehicle is able to drive autonomously around 
 ![Predictions for 120 Frames](https://cloud.githubusercontent.com/assets/2206789/22679856/e07909f4-ecb9-11e6-9840-46e91d3b68ca.png)
 
 # Acknowledgements & References
-* Sagar Bhokre - for project skeleton and constant support
-* Caleb Kirksey - for his motivating company during the course of this project
-* Mohan Karthik - for an informative blogpost motivating dataset balancing
-* Paul Hearty - for valuable [project tips](https://carnd-forums.udacity.com/questions/26214464/behavioral-cloning-cheatsheet) provided on Udacity forums that saved time. Especially the MVP: overfitting idea
-* Andrew Ayers, Ashish Singh and Kalyanramu Vemishetty for the excellent questions and giving me the permission to share them.
-* Udacity's [Project Rubric](https://review.udacity.com/#!/rubrics/432/view) coz its good have it handy/listed here.
+* **[Sagar Bhokre](https://github.com/sagarbhokre)** - for project skeleton and constant support
+* **[Caleb Kirksey](https://github.com/ckirksey3)** - for his motivating company during the course of this project
+* **Mohan Karthik** - for an [informative blogpost](https://medium.com/@mohankarthik/cloning-a-car-to-mimic-human-driving-5c2f7e8d8aff#.qdyq942ub) motivating dataset balancing
+* **Paul Hearty** - for valuable [project tips](https://carnd-forums.udacity.com/questions/26214464/behavioral-cloning-cheatsheet) provided on Udacity forums that saved time. Especially the MVP: overfitting idea
+* **Andrew Ayers**, **Ashish Singh** and **Kalyanramu Vemishetty** for the excellent questions and giving me the permission to share them.
 
 <!-- # Common Questions Addressed via Slack:
 TODO -->
