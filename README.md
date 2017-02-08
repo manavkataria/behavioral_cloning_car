@@ -1,7 +1,7 @@
 # Behavioral Cloning
 Using Keras to train a deep neural network for predicting steering angles based on camera input. Trained on a Unity3D simulator.
 
-### TLDR; Watch the Video - Gone in 60 Seconds!
+## TLDR; Watch the Video - Gone in 60 Seconds!
 [![Youtube Video](https://cloud.githubusercontent.com/assets/2206789/22684201/316bb47c-ecd0-11e6-92c7-66eb5790d286.jpg)](https://goo.gl/zhD2jV)
 
 ---
@@ -24,7 +24,7 @@ The goals / steps of this project are the following:
 [image4]: ./examples/placeholder_small.png "Whiskey Lake" -->
 
 ---
-### Files
+## Files
 My project includes the following files:
 * `model.py` - the script to create and train the model
 * `drive.py` - for driving the car in autonomous mode
@@ -40,39 +40,39 @@ My project includes the following files:
 
 Repository includes all required files and can be used to run the simulator in autonomous mode.
 
-### Code Quality
-#### Functional Code
+## Code Quality
+### Functional Code
 Using the Udacity provided simulator and my `drive.py` file, the car can be driven autonomously around the track by executing
 ```
 $ python drive.py model.h5
 ```
 
-#### Comments inline with code
+### Comments inline with code
 
 The `model.py` file contains the code for training and saving the convolution neural network. The file shows the pipeline I used for training and validating the model. It contains **detailed comments** to explain how the code works.
 
-### Model Architecture and Training Strategy
+## Model Architecture & Preprocessing
 
-#### Architecture: nVidia End-to-End Deep Learning Network
+### Architecture: nVidia End-to-End Deep Learning Network
 
 My model consists of a convolution neural network with 3x3 filter sizes and depths between 32 and 128 [`model.py`](https://github.com/manavkataria/behavioral_cloning_car/blob/master/model.py#L83-L105)
 
 The model includes `ReLU` layers to introduce nonlinearity.
 ![model](https://cloud.githubusercontent.com/assets/2206789/22705301/dcde791c-ed1f-11e6-9354-3fd2d59aeb80.jpg)
 
-##### Objective, Loss function and Hyper-Parameter tuning
+### Objective, Loss function and Hyper-Parameter tuning
 
 I used `Mean Squared Error` as a loss metric. It seems reasonably appropriate to train the model to follow the training steering angles to some close enough extent. It was important to not let the loss function go very close to zero. A very low loss indicates memorization and thus overfitting.
 
 The optimization space was non-linear. Hence there were instances where the model training would not converge. Retraining reinitializes the weights randomly and provides another shot at convergence. The model used an [`Adam`](https://github.com/manavkataria/behavioral_cloning_car/blob/master/model.py#L152) optimizer; the learning rate was not tuned manually. I did use Stochastic Gradient Descent initially but Adam is proven to be a better choice for most cases.
 
-#### Controlling Overfitting
+### Controlling Overfitting
 
 The model contains [`Dropout`(https://github.com/manavkataria/behavioral_cloning_car/blob/master/model.py#L97) layers] in order to reduce overfitting. The Dropout was [set to 10%](https://github.com/manavkataria/behavioral_cloning_car/blob/master/model.py#L59)
 
 The loss function and predictions were carefully monitored to ensure the loss doesn't go too low and the predictions aren't a perfect match. This ensures the model isn't overfitted. The model was ultimately tested by running it through the simulator and ensuring that the vehicle could stay on the track.
 
-#### Image Preprocessing
+### Image Preprocessing
 
 The Image data is [preprocessed](https://github.com/manavkataria/behavioral_cloning_car/blob/master/utils.py#L49-L56) in the model using the following techniques:
 * RGB to Grayscale
@@ -80,16 +80,15 @@ The Image data is [preprocessed](https://github.com/manavkataria/behavioral_clon
 * Resize to a smaller `WIDTH = 200`, `HEIGHT = 66`
 * Dynamic Range Adjustment
 
-#### Steering Angle Preprocessing
+### Steering Angle Preprocessing
 The steering angles were scaled up to [`STEERING_MULTIPLIER = 100`](https://github.com/manavkataria/behavioral_cloning_car/blob/master/settings.py#L10).
 
 
+## Training Strategy
 
-### Training Strategy
+### MVP Solution: Lean Design Approach
 
-#### MVP Solution: Lean Design Approach
-
-##### Building an Overfitted Model with Minimal Data
+#### Building an Overfitted Model with Minimal Data
 The overall strategy for deriving a model architecture was to initially overfit the model on three critical images before building a regualarized model for the entire track. This saves time and validates the approach.
 
 I used the following three images, twice for each training (3x2 = 6 per set) and validation set (50% validation split). Thus making a total of 12 images in the initial dataset.
@@ -114,7 +113,7 @@ I used the following three images, twice for each training (3x2 = 6 per set) and
 
 ![Predictions for 12 Frames](https://cloud.githubusercontent.com/assets/2206789/22707512/da290d60-ed27-11e6-8b18-81d697aa34c7.png)
 
-#### Building a Regularized Model
+### Building a Regularized Model
 The next step was to run the model on the entire training dataset (full track). The provided Udacity dataset had 8k images. The label distribution was quite Asymmetric and Unbalanced [Histogram: Asymmetric and Unbalanced]. I used [Horizontal Flipping](https://github.com/manavkataria/behavioral_cloning_car/blob/master/model.py#L141-L147) to Make this symmetric [Histogram: Symmetric But Unbalanced]. And lastly, [Histogram Equalization](https://github.com/manavkataria/behavioral_cloning_car/blob/master/model.py#L344-L350) for achieving balance in the training dataset [Histogram Equalization: Symmetric and Balanced].
 
 **Raw Data Histogram: Asymmetric and Unbalanced**
@@ -141,12 +140,13 @@ Once the dataset was balanced, the vehicle is able to drive autonomously around 
 
 ![Predictions for 120 Frames](https://cloud.githubusercontent.com/assets/2206789/22679856/e07909f4-ecb9-11e6-9840-46e91d3b68ca.png)
 
-### Acknowledgements & References
-* Sagar Bhokre for project skeleton and constant support
-* Caleb Kirksey for his excellent company during the grind
-* Mohan Karthik for an informative blogpost motivating dataset balancing
+## Acknowledgements & References
+* Sagar Bhokre - for project skeleton and constant support
+* Caleb Kirksey - for his motivating company during the course of this project
+* Mohan Karthik - for an informative blogpost motivating dataset balancing
 * Paul Hearty - for valuable [project tips](https://carnd-forums.udacity.com/questions/26214464/behavioral-cloning-cheatsheet) provided on Udacity forums that saved time. Especially the MVP: overfitting idea
+* Andrew Ayers, Ashish Singh and Kalyanramu Vemishetty for the excellent questions and giving me the permission to share them.
 * Udacity's [Project Rubric](https://review.udacity.com/#!/rubrics/432/view) coz its good have them listed here.
 
-<!-- #### Common Questions Addressed via Slack:
+<!-- ## Common Questions Addressed via Slack:
 TODO -->
