@@ -1,7 +1,9 @@
 Table of Contents
 =================
+
    * [Behavioral Cloning](#behavioral-cloning)
    * [TLDR; Watch the Video - Gone in 60 Seconds!](#tldr-watch-the-video---gone-in-60-seconds)
+   * [Goal](#goal)
    * [Files](#files)
    * [Code Quality](#code-quality)
       * [Functional Code](#functional-code)
@@ -23,10 +25,12 @@ Table of Contents
 Using Keras to train a deep neural network for predicting steering angles based on camera input. Trained on a Unity3D simulator.
 
 # TLDR; Watch the Video - Gone in 60 Seconds!
-[![Youtube Video](https://cloud.githubusercontent.com/assets/2206789/22684201/316bb47c-ecd0-11e6-92c7-66eb5790d286.jpg)](https://goo.gl/zhD2jV)
----
+This video contains subtitles mentioning salient points and challenges encountered during the project. Overcoming these is no laughing matter! 😉
 
-**Behavioral Cloning Project**
+[![Youtube Video](https://cloud.githubusercontent.com/assets/2206789/22684201/316bb47c-ecd0-11e6-92c7-66eb5790d286.jpg)](https://goo.gl/zhD2jV)
+
+---
+# Goal
 
 The goals of this project are the following:
 * Use the simulator to collect data of good driving behavior
@@ -34,15 +38,6 @@ The goals of this project are the following:
 * Train and validate the model with a training and validation set
 * Test that the model successfully drives around track one without leaving the road
 
-<!--
-[//]: # (Image References)
-
-[image1]: ./examples/placeholder.png "Model Visualization"
-[image2]: ./examples/placeholder.png "Grayscaling"
-[image3]: ./examples/placeholder_small.png "Sleazy Corner"
-[image4]: ./examples/placeholder_small.png "Whiskey Lake" -->
-
----
 # Files
 My project includes the following files:
 * `model.py` - the script to create and train the model
@@ -162,7 +157,4 @@ Once the dataset was balanced, the vehicle is able to drive autonomously around 
 * **[Caleb Kirksey](https://github.com/ckirksey3)** - for his motivating company during the course of this project
 * **Mohan Karthik** - for an [informative blogpost](https://medium.com/@mohankarthik/cloning-a-car-to-mimic-human-driving-5c2f7e8d8aff#.qdyq942ub) motivating dataset balancing
 * **Paul Hearty** - for valuable [project tips](https://carnd-forums.udacity.com/questions/26214464/behavioral-cloning-cheatsheet) provided on Udacity forums that saved time. Especially the MVP: overfitting idea
-* **Andrew Ayers**, **Ashish Singh** and **Kalyanramu Vemishetty** for the excellent questions and giving me the permission to share them.
-
-<!-- # Common Questions Addressed via Slack:
-TODO -->
+* **Andrew Ayers**, **Ashish Singh** and **Kalyanramu Vemishetty** for the [excellent questions](https://github.com/manavkataria/behavioral_cloning_car/issues/2) and giving me the permission to share them.
