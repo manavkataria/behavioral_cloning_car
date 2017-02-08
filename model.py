@@ -386,7 +386,6 @@ def main():
             print("{};  {:>6.2f}".format(model.lines[i].split(',')[0],
                                          prediction[0][0] / STEERING_MULTIPLIER))
             display_images(image, str(prediction))
-        # return
 
     # Pickle Dump
     pickle.dump([history.history, X_balanced, y_balanced, y_train], open('save/hist_xy.p', 'wb'))
