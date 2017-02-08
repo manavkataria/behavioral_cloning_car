@@ -1,7 +1,7 @@
 # Behavioral Cloning
 Using Keras to train a deep neural network for predicting steering angles based on camera input. Trained on a Unity3D simulator.
 
-### TLDR; Gone in 60 Seconds!
+### TLDR; Watch the Video - Gone in 60 Seconds!
 [![Youtube Video](https://cloud.githubusercontent.com/assets/2206789/22684201/316bb47c-ecd0-11e6-92c7-66eb5790d286.jpg)](https://goo.gl/zhD2jV)
 
 ---
@@ -23,9 +23,6 @@ The goals / steps of this project are the following:
 [image3]: ./examples/placeholder_small.png "Sleazy Corner"
 [image4]: ./examples/placeholder_small.png "Whiskey Lake" -->
 
-## Rubric Points
-Here I describe the [rubric points](https://review.udacity.com/#!/rubrics/432/view) individually
-
 ---
 ### Files
 My project includes the following files:
@@ -41,7 +38,7 @@ My project includes the following files:
 * Udacity Dataset [Download here](https://d17h27t6h515a5.cloudfront.net/topher/2016/December/584f6edd_data/data.zip) - Track1 Dataset Used for Training
 * Unity3D Simulator - [Download for MacOS](https://d17h27t6h515a5.cloudfront.net/topher/2017/February/5894ecbd_beta-simulator-mac/beta-simulator-mac.zip)
 
-Submission includes all required files and can be used to run the simulator in autonomous mode.
+Repository includes all required files and can be used to run the simulator in autonomous mode.
 
 ### Code Quality
 #### Functional Code
@@ -58,7 +55,7 @@ The `model.py` file contains the code for training and saving the convolution ne
 
 #### Architecture: nVidia End-to-End Deep Learning Network
 
-My model consists of a convolution neural network with 3x3 filter sizes and depths between 32 and 128 [`model.py` lines 83-105](https://github.com/manavkataria/behavioral_cloning_car/blob/master/model.py#L83-L105)
+My model consists of a convolution neural network with 3x3 filter sizes and depths between 32 and 128 [`model.py`](https://github.com/manavkataria/behavioral_cloning_car/blob/master/model.py#L83-L105)
 
 The model includes `ReLU` layers to introduce nonlinearity.
 ![model](https://cloud.githubusercontent.com/assets/2206789/22705301/dcde791c-ed1f-11e6-9354-3fd2d59aeb80.jpg)
@@ -92,52 +89,64 @@ The steering angles were scaled up to [`STEERING_MULTIPLIER = 100`](https://gith
 
 #### MVP Solution: Lean Design Approach
 
-##### Build an Overfitted Model with Minimal Data
+##### Building an Overfitted Model with Minimal Data
 The overall strategy for deriving a model architecture was to initially overfit the model on three critical images before building a regualarized model for the entire track. This saves time and validates the approach.
 
-I used each of the three images twice (3x2 = 6) each for training and validation (50% validation split). Thus making a total of 12 images in the initial dataset.
+I used the following three images, twice for each training (3x2 = 6 per set) and validation set (50% validation split). Thus making a total of 12 images in the initial dataset.
 
 **Recovery: Extreme Left of Lane**
+
 ![center_2017_01_16_18_49_00_738](https://cloud.githubusercontent.com/assets/2206789/22707096/80e205fa-ed26-11e6-8f2d-114353c31d54.jpg)
 
-**Drive Straight: Center of Lane** ![center_2017_01_16_18_49_02_100](https://cloud.githubusercontent.com/assets/2206789/22707103/885d4f4c-ed26-11e6-8525-5d1a78465959.jpg)
+**Drive Straight: Center of Lane**
 
-**Recovery: Extreme Right of Lane** ![center_2017_01_16_18_49_04_959](https://cloud.githubusercontent.com/assets/2206789/22707162/b5e5e5e6-ed26-11e6-829c-f119ac7ceafd.jpg)
+![center_2017_01_16_18_49_02_100](https://cloud.githubusercontent.com/assets/2206789/22707103/885d4f4c-ed26-11e6-8525-5d1a78465959.jpg)
+
+**Recovery: Extreme Right of Lane**
+
+![center_2017_01_16_18_49_04_959](https://cloud.githubusercontent.com/assets/2206789/22707162/b5e5e5e6-ed26-11e6-829c-f119ac7ceafd.jpg)
 
 **I ran this for 30 epochs to achieve satisfactory loss convergence.**
+
 ![Loss Function 30 Epochs](https://cloud.githubusercontent.com/assets/2206789/22679857/e079a576-ecb9-11e6-9e0a-f601946d25aa.png)
 
 **The predictions came out close but not extremely overfitted, which is ideal!**
+
 ![Predictions for 12 Frames](https://cloud.githubusercontent.com/assets/2206789/22707512/da290d60-ed27-11e6-8b18-81d697aa34c7.png)
 
-
-#### Build a Regularized Model
+#### Building a Regularized Model
 The next step was to run the model on the entire training dataset (full track). The provided Udacity dataset had 8k images. The label distribution was quite Asymmetric and Unbalanced [Histogram: Asymmetric and Unbalanced]. I used [Horizontal Flipping](https://github.com/manavkataria/behavioral_cloning_car/blob/master/model.py#L141-L147) to Make this symmetric [Histogram: Symmetric But Unbalanced]. And lastly, [Histogram Equalization](https://github.com/manavkataria/behavioral_cloning_car/blob/master/model.py#L344-L350) for achieving balance in the training dataset [Histogram Equalization: Symmetric and Balanced].
 
 **Raw Data Histogram: Asymmetric and Unbalanced**
- ![Histogram: Asymmetric and Unbalanced](https://cloud.githubusercontent.com/assets/2206789/22631651/24bdcd60-ebc6-11e6-98f6-46f0cc1e926e.png)
+
+![Histogram: Asymmetric and Unbalanced](https://cloud.githubusercontent.com/assets/2206789/22631651/24bdcd60-ebc6-11e6-98f6-46f0cc1e926e.png)
 
 **Horizontally Flipped Data Histogram: Symmetric But Unbalanced**
- ![Histogram: Symmetric But Unbalanced](https://cloud.githubusercontent.com/assets/2206789/22631698/e0e85e38-ebc6-11e6-94cb-05f7739f188d.png)
+
+![Histogram: Symmetric But Unbalanced](https://cloud.githubusercontent.com/assets/2206789/22631698/e0e85e38-ebc6-11e6-94cb-05f7739f188d.png)
 
 **Fully Processed with Histogram Equalization: Symmetric and Balanced**
- ![Histogram Equalization: Symmetric and Balanced](https://cloud.githubusercontent.com/assets/2206789/22631705/f71f9f5e-ebc6-11e6-9315-c4fc5f3048ab.png)
+
+![Histogram Equalization: Symmetric and Balanced](https://cloud.githubusercontent.com/assets/2206789/22631705/f71f9f5e-ebc6-11e6-9315-c4fc5f3048ab.png)
 
 **Loss Function 5 Epochs**
- ![Loss Function 5 Epochs](https://cloud.githubusercontent.com/assets/2206789/22679803/a52b2972-ecb9-11e6-83c1-c8b1eb066999.png)
+
+![Loss Function 5 Epochs](https://cloud.githubusercontent.com/assets/2206789/22679803/a52b2972-ecb9-11e6-83c1-c8b1eb066999.png)
 
 Finally, the balanced dataset was [randomly shuffled](https://github.com/manavkataria/behavioral_cloning_car/blob/master/model.py#L366) before being fed into the model.
 
 Once the dataset was balanced, the vehicle is able to drive autonomously around the track without leaving the road.
 
 **Predictions for 120 Frames**
- ![Predictions for 120 Frames](https://cloud.githubusercontent.com/assets/2206789/22679856/e07909f4-ecb9-11e6-9840-46e91d3b68ca.png)
 
- <!-- #### Common Questions Addressed via Slack:
- TODO -->
+![Predictions for 120 Frames](https://cloud.githubusercontent.com/assets/2206789/22679856/e07909f4-ecb9-11e6-9840-46e91d3b68ca.png)
 
-<!-- ### Acknowledgements & References:
-* SagarBhokre for [design and skeleton](https://github.com/sagarbhokre/BigWheel-SteeringController) of the solution
-* mohankarthik for Motivating Dataset Balancing
+### Acknowledgements & References
+* Sagar Bhokre for project skeleton and constant support
 * Caleb Kirksey for his excellent company during the grind
-* Paul - for excellent tips provided on Udacity forums -->
+* Mohan Karthik for an informative blogpost motivating dataset balancing
+* Paul Hearty - for valuable [project tips](https://carnd-forums.udacity.com/questions/26214464/behavioral-cloning-cheatsheet) provided on Udacity forums that saved time. Especially the MVP: overfitting idea
+* Udacity's [Project Rubric](https://review.udacity.com/#!/rubrics/432/view) coz its good have them listed here.
+
+<!-- #### Common Questions Addressed via Slack:
+TODO -->
