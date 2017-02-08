@@ -8,6 +8,7 @@ DEPTH = 1
 
 # Steering Miltiplier
 STEERING_MULTIPLIER = 100
+THROTTLE = 0.1
 
 # Image ROI Crop Percentage from [left, top, right, bottom]
 ROI_bbox = [0.0, 0.40, 0.0, 0.13]

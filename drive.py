@@ -16,7 +16,7 @@ from io import BytesIO
 from keras.models import load_model
 
 from utils import preprocess_for_autonomy
-from settings import STEERING_MULTIPLIER
+from settings import STEERING_MULTIPLIER, THROTTLE
 
 
 sio = socketio.Server()
@@ -45,7 +45,7 @@ def telemetry(sid, data):
         ###
 
         steering_angle = prediction
-        throttle = 0.10
+        throttle = THROTTLE
         print("{:>+6.2f} {}".format(steering_angle, throttle))
         send_control(steering_angle, throttle)
 

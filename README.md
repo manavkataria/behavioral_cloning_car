@@ -42,7 +42,7 @@ The goals of this project are the following:
 My project includes the following files:
 * `model.py` - the script to create and train the model
 * `drive.py` - for driving the car in autonomous mode
-* `model.h5` - a trained convolution neural network
+* `model.h5` - a trained convolution neural network with weights. [Download](https://s3-us-west-2.amazonaws.com/udacity-sdc-nanodegree/model.h5).
 * `utils.py` - shared utils across module
 * `settings.py` - settings shared across module
 * `plotter.py` - to plot histograms, predictions, loss function, etc.
@@ -156,5 +156,5 @@ Once the dataset was balanced, the vehicle is able to drive autonomously around 
 * **[Sagar Bhokre](https://github.com/sagarbhokre)** - for project skeleton and constant support
 * **[Caleb Kirksey](https://github.com/ckirksey3)** - for his motivating company during the course of this project
 * **Mohan Karthik** - for an [informative blogpost](https://medium.com/@mohankarthik/cloning-a-car-to-mimic-human-driving-5c2f7e8d8aff#.qdyq942ub) motivating dataset balancing
-* **Paul Hearty** - for valuable [project tips](https://carnd-forums.udacity.com/questions/26214464/behavioral-cloning-cheatsheet) provided on Udacity forums that saved time. Especially the MVP: overfitting idea
-* **Andrew Ayers**, **Ashish Singh** and **Kalyanramu Vemishetty** for the [excellent questions](https://github.com/manavkataria/behavioral_cloning_car/issues/2) and giving me the permission to share them.
+* **Paul Hearty** - for valuable [project tips](https://carnd-forums.udacity.com/questions/26214464/behavioral-cloning-cheatsheet) provided on Udacity forums that saved time
+* **Andrew Ayers**, **Ashish Singh** and **Kalyanramu Vemishetty** for the [excellent questions](https://github.com/manavkataria/behavioral_cloning_car/issues/2) and giving me the permission to share them
