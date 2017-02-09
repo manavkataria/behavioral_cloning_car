@@ -16,7 +16,7 @@ Table of Contents
       * [Steering Angle Preprocessing](#steering-angle-preprocessing)
    * [Training Strategy](#training-strategy)
       * [Building an Overfitted Model with Minimal Data](#building-an-overfitted-model-with-minimal-data)
-      * [Building a Regularized Model with Full Data](#building-a-regularized-model-with-full-data)
+      * [Building a Regularized Model with Augmented Data](#building-a-regularized-model-with-augmented-data)
    * [Acknowledgements &amp; References](#acknowledgements--references)
 
 ---
@@ -82,7 +82,7 @@ The optimization space was non-linear. Hence there were instances where the mode
 
 ## Controlling Overfitting
 
-The model contains [`Dropout`(https://github.com/manavkataria/behavioral_cloning_car/blob/master/model.py#L97) layers] in order to reduce overfitting. The Dropout was [set to 10%](https://github.com/manavkataria/behavioral_cloning_car/blob/master/model.py#L59)
+The model contains [`Dropout`](https://github.com/manavkataria/behavioral_cloning_car/blob/master/model.py#L97) layers in order to reduce overfitting. The Dropout was [set to 10%](https://github.com/manavkataria/behavioral_cloning_car/blob/master/model.py#L59)
 
 The loss function and predictions were carefully monitored to ensure the loss doesn't go too low and the predictions aren't a perfect match. This ensures the model isn't overfitted. The model was ultimately tested by running it through the simulator and ensuring that the vehicle could stay on the track.
 
@@ -125,8 +125,8 @@ I used the following three images, twice for each training (3x2 = 6 per set) and
 
 ![Predictions for 12 Frames](https://cloud.githubusercontent.com/assets/2206789/22707512/da290d60-ed27-11e6-8b18-81d697aa34c7.png)
 
-## Building a Regularized Model with Full Data
-The next step was to run the model on the entire training dataset (full track). The provided Udacity dataset had 8k images. The label distribution was quite Asymmetric and Unbalanced [Histogram: Asymmetric and Unbalanced]. I used [Horizontal Flipping](https://github.com/manavkataria/behavioral_cloning_car/blob/master/model.py#L141-L147) to Make this symmetric [Histogram: Symmetric But Unbalanced]. And lastly, [Histogram Equalization](https://github.com/manavkataria/behavioral_cloning_car/blob/master/model.py#L344-L350) for achieving balance in the training dataset [Histogram Equalization: Symmetric and Balanced].
+## Building a Regularized Model with Augmented Data
+The next step was to run the model on the entire training dataset (full track). The provided Udacity dataset had 8k images. The label distribution was quite Asymmetric and Unbalanced [Histogram: Asymmetric and Unbalanced]. I used [Horizontal Flipping](https://github.com/manavkataria/behavioral_cloning_car/blob/master/model.py#L141-L147) to Make this symmetric [Histogram: Symmetric But Unbalanced]. And lastly, [Histogram Equalization](https://github.com/manavkataria/behavioral_cloning_car/blob/master/model.py#L344-L350) for achieving balance in the training dataset [Histogram Equalization: Symmetric and Balanced]. I also added a random 10% noise to the steering angles for each image. This helps avoid overfitting as well.
 
 **Raw Data Histogram: Asymmetric and Unbalanced**
 
