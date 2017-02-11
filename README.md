@@ -42,15 +42,15 @@ The goals of this project are the following:
 My project includes the following files:
 * `model.py` - the script to create and train the model
 * `drive.py` - for driving the car in autonomous mode
-* `model.h5` - a trained convolution neural network with weights. [Download](https://s3-us-west-2.amazonaws.com/udacity-sdc-nanodegree/model.h5).
+* `model.h5` - a trained convolution neural network with weights. [Download](https://s3-us-west-2.amazonaws.com/udacity-sdc-nanodegree/model.h5)
 * `utils.py` - shared utils across module
 * `settings.py` - settings shared across module
-* `plotter.py` - to plot histograms, predictions, loss function, etc.
+* `plotter.py` - to plot histograms, predictions, loss function, etc
 * `run.sh` - cleanup, train, validate, plot/visualize
 * `install.sh` - install dependencies
 * `README.md` - description of the development process (this file)
-* Udacity Dataset [Download here](https://d17h27t6h515a5.cloudfront.net/topher/2016/December/584f6edd_data/data.zip) - Track1 Dataset Used for Training
-* Unity3D Simulator - [Github Repo](https://github.com/udacity/self-driving-car-sim); [Download for MacOS](https://d17h27t6h515a5.cloudfront.net/topher/2017/February/5894ecbd_beta-simulator-mac/beta-simulator-mac.zip)
+* Udacity Dataset - Track1 Dataset Used for Training. [Download here](https://d17h27t6h515a5.cloudfront.net/topher/2016/December/584f6edd_data/data.zip)
+* Unity3D Simulator - [Github Repo](https://github.com/udacity/self-driving-car-sim). [Download MacOS](https://d17h27t6h515a5.cloudfront.net/topher/2017/February/5894ecbd_beta-simulator-mac/beta-simulator-mac.zip)
 
 Repository includes all required files and can be used to run the simulator in autonomous mode.
 
